@@ -22,9 +22,12 @@ var/
 wheels/
 share/python-wheels/
 *.egg-info/
-.installed.cfg
+  .installed.cfg
 *.egg
-MANIFEST
+MANIFESTa
+SRS/
+Ritely_Logo/
+
 
 # PyInstaller
 #   Usually these files are written by a python script from a template
