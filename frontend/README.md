@@ -10,7 +10,7 @@ Dari root repository:
 python3 -m http.server 8080 --directory frontend
 ```
 
-Buka http://localhost:8080. Internet diperlukan untuk Webix CDN (edge) dan Google Fonts; font lokal sans-serif menjadi fallback. Tidak memerlukan npm atau build.
+Buka http://localhost:8080. Webix disimpan lokal di `vendor/webix`, sehingga aplikasinya tidak mengunduh library itu saat dibuka. Google Fonts memakai font sans-serif lokal sebagai fallback jika tidak tersedia. Tidak memerlukan npm atau build.
 
 ## Struktur
 

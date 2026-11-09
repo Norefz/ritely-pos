@@ -21,12 +21,17 @@ const factories = {
   shifts: () => shifts(refresh),
   reports,
   users: () => users(refresh),
+  audit: () => ({rows:[{view:"template",height:88,css:"page-heading",template:"<h1>Log audit</h1><p>Riwayat aktivitas akan tersedia setelah backend tersambung.</p>"}]}),
 };
 function refresh() {
-  webix.ui(
-    { id: "content", padding: 24, margin: 16, ...factories[current]() },
-    $$("content"),
-  );
+  const host = $$("contentHost");
+  const oldPage = host.getChildViews()[0];
+  if (oldPage) host.removeView(oldPage);
+  host.addView({ padding: 24, margin: 16, ...factories[current]() });
+  requestAnimationFrame(() => {
+    const page = host.getChildViews()[0];
+    if (page?.scrollTo) page.scrollTo(0, 0);
+  });
   $$("pageTitle").setValue(
     menus[state.role].find(([id]) => id === current)?.[1] || "Ritely",
   );
@@ -69,7 +74,7 @@ if (!window.webix) {
               template:
                 "Mode demo frontend · Data hanya di memori browser dan akan direset saat halaman dimuat ulang.",
             },
-            { id: "content" },
+            { view: "layout", id: "contentHost", rows: [] },
           ],
         },
       ],
