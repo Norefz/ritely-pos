@@ -1,9 +1,30 @@
-# Frontend Ritely POS
+# Ritely POS — Frontend Webix
 
-Kerangka frontend Webix sederhana. Folder ini belum berisi halaman atau alur transaksi.
+Frontend demo tanpa backend, database, autentikasi, atau Midtrans. Seluruh data disimpan di memori browser dan direset saat reload. Pemilih peran hanya untuk pratinjau tampilan; bukan sistem otorisasi.
 
-- `src/views`: tampilan Webix, event UI, dan request ke backend Flask.
-- `src/styles`: tema, tipografi, dan styling yang kompatibel dengan Webix.
+## Menjalankan
 
-Frontend tidak memakai MVC terpisah agar tetap sederhana. View mengirim aksi ke endpoint backend; aturan bisnis dan validasi final tetap berada di backend.
+Dari root repository:
 
+```sh
+python3 -m http.server 8080 --directory frontend
+```
+
+Buka http://localhost:8080. Internet diperlukan untuk Webix CDN (edge) dan Google Fonts; font lokal sans-serif menjadi fallback. Tidak memerlukan npm atau build.
+
+## Struktur
+
+- `src/app.js`: memasang shell sekali, navigasi, dan pergantian halaman.
+- `src/views/layout/sidebar.js`: seluruh menu sidebar dan menu sesuai peran.
+- `src/views/layout/navbar.js`: navbar bersama.
+- `src/views/pages/`: isi halaman; tidak membuat navbar/sidebar sendiri.
+- `src/styles/app.css`: warna dan tipografi sesuai SRS.
+- `src/demo.js`: data simulasi bersama dan format tampilan.
+
+Halaman Manajer: ringkasan, produk, kategori, stok, transaksi, shift, laporan, akun kasir. Halaman Kasir: katalog/keranjang, transaksi, shift. Tambah/ubah produk, penyesuaian stok, kategori, profil kasir, buka/tutup shift, penjualan tunai simulasi, struk, dan ekspor laporan berjalan di browser. Mulai demo kasir dengan membuka shift dahulu. Transaksi hanya berasal dari simulasi yang benar-benar dilakukan dalam sesi.
+
+Pembayaran online sengaja dinonaktifkan sampai backend tersedia. Login, waktu shift operasional, otorisasi server, transaksi atomik, pending/void, filter laporan periode, dan sinkronisasi data perlu implementasi backend/integrasi lanjutan. Data profil kasir adalah contoh; simulasi penjualan memakai identitas demo Dina.
+
+Target utama desktop/laptop. Sidebar bisa disembunyikan pada layar sempit; tabel mempunyai scroll horizontal. Layout kasir membutuhkan ruang untuk katalog dan keranjang berdampingan.
+
+Pola layout mengacu pada dokumentasi resmi Webix: https://docs.webix.com/desktop__building_app_architecture.html

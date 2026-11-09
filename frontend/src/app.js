@@ -1,0 +1,93 @@
+import { state } from "./demo.js";
+import { sidebar, menus } from "./views/layout/sidebar.js";
+import { navbar } from "./views/layout/navbar.js";
+import { dashboard } from "./views/pages/dashboard.js";
+import { products, categories, stock } from "./views/pages/products.js";
+import { pos } from "./views/pages/pos.js";
+import {
+  transactions,
+  shifts,
+  reports,
+  users,
+} from "./views/pages/operations.js";
+let current = "dashboard";
+const factories = {
+  dashboard: () => dashboard(navigate),
+  products: () => products(refresh),
+  categories: () => categories(refresh),
+  stock: () => stock(refresh),
+  pos: () => pos(refresh),
+  transactions,
+  shifts: () => shifts(refresh),
+  reports,
+  users: () => users(refresh),
+};
+function refresh() {
+  webix.ui(
+    { id: "content", padding: 24, margin: 16, ...factories[current]() },
+    $$("content"),
+  );
+  $$("pageTitle").setValue(
+    menus[state.role].find(([id]) => id === current)?.[1] || "Ritely",
+  );
+}
+function navigate(id) {
+  if (!menus[state.role].some(([key]) => key === id)) return;
+  current = id;
+  refresh();
+  if ($$("navigation").getSelectedId() !== id) $$("navigation").select(id);
+  history.replaceState(null, "", "#" + id);
+  if (innerWidth < 900) $$("sidebar").hide();
+}
+function changeRole(role) {
+  state.role = role;
+  $$("sidebarProfile").refresh();
+  const nav = $$("navigation");
+  nav.clearAll();
+  nav.parse(menus[role].map(([id, value]) => ({ id, value })));
+  navigate(menus[role][0][0]);
+}
+if (!window.webix) {
+  document.getElementById("app").innerHTML =
+    '<p class="boot">Webix belum dapat dimuat. Periksa koneksi internet lalu muat ulang halaman.</p>';
+} else
+  webix.ready(() => {
+    document.getElementById("app").replaceChildren();
+    webix.ui({
+      container: "app",
+      id: "shell",
+      cols: [
+        sidebar(state.role, navigate),
+        {
+          rows: [
+            navbar(state.role, changeRole),
+            {
+              view: "template",
+              height: 42,
+              css: "demo-banner",
+              borderless: true,
+              template:
+                "Mode demo frontend · Data hanya di memori browser dan akan direset saat halaman dimuat ulang.",
+            },
+            { id: "content" },
+          ],
+        },
+      ],
+    });
+    navigate(
+      menus[state.role].some(([id]) => id === location.hash.slice(1))
+        ? location.hash.slice(1)
+        : "dashboard",
+    );
+    const resize = () => {
+      const shell = $$("shell");
+      shell.define("width", innerWidth);
+      shell.define("height", innerHeight);
+      shell.resize();
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    window.addEventListener("hashchange", () =>
+      navigate(location.hash.slice(1)),
+    );
+  });
