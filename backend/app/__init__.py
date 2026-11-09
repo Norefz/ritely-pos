@@ -1,0 +1,2 @@
+"""Application package Ritely POS."""
+
