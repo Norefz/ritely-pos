@@ -114,11 +114,16 @@ export function dashboard(navigate) {
             {},
             {
               ...button("Hari ini", () => {}),
+              autowidth: false,
+              width: 92,
               height: 56,
               css: "dashboard-action today-action",
             },
+            { width: 16 },
             {
               ...button("Lihat laporan", () => navigate("reports"), true),
+              autowidth: false,
+              width: 128,
               height: 56,
               css: "dashboard-action report-action",
             },

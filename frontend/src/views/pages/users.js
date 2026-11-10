@@ -74,14 +74,11 @@ function statsHtml() {
   const covered = keys.filter((k) =>
     active.some((u) => u.assigned_shift === k),
   );
-  const missing = keys
-    .filter((k) => !covered.includes(k))
-    .map((k) => SHIFTS[k].name);
+  const missing = keys.filter((k) => !covered.includes(k));
   return `
-    <div class="pd-stat"><span>Total kasir</span><strong>${state.users.length}</strong><small>Profil contoh</small></div>
-    <div class="pd-stat"><span>Aktif</span><strong>${active.length}</strong><small>Dapat bertugas di shift</small></div>
-    <div class="pd-stat${missing.length ? " warn" : ""}"><span>Shift terisi</span><strong>${covered.length}/${keys.length}</strong>
-      <small>${missing.length ? `${escape(missing.join(" dan "))} belum punya kasir aktif` : "Shift 1 dan Shift 2 punya kasir"}</small></div>`;
+    <div class="pd-stat"><span>Total kasir</span><strong>${state.users.length}</strong></div>
+    <div class="pd-stat"><span>Aktif</span><strong>${active.length}</strong></div>
+    <div class="pd-stat${missing.length ? " warn" : ""}"><span>Shift terisi</span><strong>${covered.length}/${keys.length}</strong></div>`;
 }
 function chipsHtml() {
   const active = state.users.filter((u) => u.active).length;

@@ -492,15 +492,21 @@ small {
   padding: 0 14px !important;
   font-size: 13px !important;
   border-radius: 10px !important;
+  white-space: nowrap !important;
+  box-sizing: border-box;
 }
 .today-action .webix_button {
+  min-width: 84px;
   background: #fff !important;
-  border: 1px solid #d8e0ec !important;
+  border: 1px solid #b8c5d8 !important;
+  outline: 1px solid #d8e0ec !important;
+  outline-offset: -1px;
   color: #334155 !important;
   border-radius: 12px !important;
   font-weight: 600;
 }
 .report-action .webix_button {
+  min-width: 116px;
   background: #2453dc !important;
   border: 1px solid #2453dc !important;
   color: #fff !important;
@@ -2250,4 +2256,145 @@ small {
 }
 .pd-stat.warn small {
   color: #945a00;
+}
+
+/* ===== Log audit redesign (memakai komponen pd- dari halaman Produk) ===== */
+.au-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border-radius: 99px;
+  background: #fff0d0;
+  color: #7a4c00;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.au-wait span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d18a00;
+}
+.au-off {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.au-off .pd-chip,
+.au-off .pd-search input {
+  cursor: default;
+}
+.au-table {
+  min-width: 860px;
+}
+.au-c-time {
+  width: 200px;
+}
+.au-c-user {
+  width: 220px;
+}
+.au-c-act {
+  width: 240px;
+}
+.au-c-detail {
+  width: 260px;
+}
+.au-empty {
+  padding: 62px 20px 70px;
+  text-align: center;
+}
+.au-empty i {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: #eef2f8;
+  color: #526175;
+}
+.au-empty i .pd-ico {
+  width: 24px;
+  height: 24px;
+}
+.au-empty b {
+  font:
+    700 20px Urbanist,
+    sans-serif;
+}
+.au-empty p {
+  max-width: 460px;
+  margin: 8px auto 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #69778e;
+}
+.au-caption {
+  margin: 24px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #526175;
+}
+.au-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.au-feat {
+  padding: 22px 22px 24px;
+  background: #fff;
+  border: 1px solid #dfe6f1;
+  border-radius: 16px;
+}
+.au-feat i {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: #e8efff;
+  color: #2453c9;
+}
+.au-feat i.green {
+  background: #e3f5eb;
+  color: #197344;
+}
+.au-feat i.amber {
+  background: #fff0d0;
+  color: #945a00;
+}
+.au-feat i.purple {
+  background: #eee7ff;
+  color: #6945b3;
+}
+.au-feat i .pd-ico {
+  width: 22px;
+  height: 22px;
+}
+.au-feat b {
+  display: block;
+  font:
+    700 17px Urbanist,
+    sans-serif;
+}
+.au-feat p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #69778e;
+}
+@media (max-width: 1100px) {
+  .au-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .au-grid {
+    grid-template-columns: 1fr;
+  }
 }
