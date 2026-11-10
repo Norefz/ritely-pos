@@ -763,8 +763,19 @@ small {
   color: #2250b9;
   background: #dfebff;
 }
-.product-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:8px;box-sizing:border-box;background:#fff}
-.product-art>span{z-index:0}
+.product-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  box-sizing: border-box;
+  background: #fff;
+}
+.product-art > span {
+  z-index: 0;
+}
 .product-art.orange {
   background: #ffead8;
   color: #a3471d;
@@ -912,7 +923,7 @@ small {
   height: 58px !important;
   border-radius: 12px !important;
   background: #2453dc !important;
-  color:#fff!important;
+  color: #fff !important;
   font-size: 17px !important;
   font-weight: 600 !important;
 }
@@ -986,4 +997,328 @@ small {
 }
 .next-shift p {
   grid-column: 1 / -1;
+}
+
+/* ===== Laporan redesign ===== */
+.manager-kpis .webix_template {
+  box-sizing: border-box;
+}
+.report-kpis .webix_template {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.report-kpis .webix_template > div {
+  position: relative;
+}
+.report-kpis .kpi-icon {
+  position: absolute;
+  right: 18px;
+  top: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+.report-kpis .kpi-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.report-period .webix_template {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #e8efff;
+  color: #1e40af;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+}
+.report-period svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.report-export .webix_button {
+  height: 44px !important;
+  line-height: 42px !important;
+  background: #2453dc !important;
+  border: 1px solid #2453dc !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+.report-export .webix_button:hover {
+  background: #1942bd !important;
+}
+.report-card {
+  background: #fff;
+  border: 1px solid #dfe6f1 !important;
+  border-radius: 18px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.report-card .webix_template {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 20px 24px 24px;
+  overflow: auto;
+}
+.report-list .webix_template {
+  padding: 20px 0 0;
+}
+.rp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+.report-list .rp-head {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+.rp-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #69778e;
+}
+.rp-count {
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: #eef1f6;
+  color: #536177;
+  font-size: 12px;
+  font-weight: 600;
+}
+.rp-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1.3fr) minmax(0, 1.5fr) 130px 90px;
+  column-gap: 16px;
+  align-items: center;
+  height: 64px;
+  padding: 0 24px;
+  border-top: 1px solid #e9edf4;
+  box-sizing: border-box;
+}
+.rp-row.rp-th {
+  height: 44px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #526175;
+}
+.rp-row .r,
+.rp-money,
+.rp-share {
+  text-align: right;
+}
+.rp-rank {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #536177;
+  font-size: 13px;
+  font-weight: 700;
+}
+.rp-rank.top {
+  background: #e9efff;
+  color: #2453ca;
+}
+.rp-name b {
+  display: block;
+  font-weight: 600;
+}
+.rp-name small {
+  color: #69778e;
+}
+.rp-unit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rp-unit b {
+  width: 34px;
+  text-align: right;
+  font-weight: 700;
+}
+.rp-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: #e8edf6;
+  overflow: hidden;
+}
+.rp-track i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #94b4f4;
+}
+.rp-track i.dark {
+  background: #2453dc;
+}
+.rp-money {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rp-share {
+  color: #526175;
+  font-size: 13px;
+  font-weight: 500;
+}
+.rp-foot {
+  padding: 16px 24px;
+  border-top: 1px solid #e9edf4;
+  font-size: 12px;
+  color: #69778e;
+}
+.rp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  border-top: 1px solid #e9edf4;
+  color: #69778e;
+  font-size: 13px;
+}
+.rp-pagination > div {
+  display: flex;
+  gap: 8px;
+}
+.rp-pagination button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d8e0ec;
+  border-radius: 9px;
+  background: #fff;
+  color: #334155;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.rp-pagination button:hover:not(:disabled) {
+  border-color: #2453dc;
+  color: #2453dc;
+}
+.rp-pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rp-empty {
+  padding: 30px 24px;
+  text-align: center;
+  color: #718096;
+  line-height: 1.6;
+}
+.rp-stack {
+  display: flex;
+  gap: 3px;
+  height: 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+}
+.rp-stack.empty {
+  background: #e8edf6;
+}
+.rp-stack i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+.rp-stack i:first-child {
+  border-radius: 8px 3px 3px 8px;
+}
+.rp-stack i:last-child {
+  border-radius: 3px 8px 8px 3px;
+}
+.rp-stack i:only-child {
+  border-radius: 8px;
+}
+.rp-stack i.cash,
+.rp-leg .sw.cash {
+  background: #4cb787;
+}
+.rp-stack i.online,
+.rp-leg .sw.online {
+  background: #2453dc;
+}
+.rp-leg {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  column-gap: 12px;
+  align-items: center;
+  height: 64px;
+  border-top: 1px solid #e9edf4;
+  box-sizing: border-box;
+}
+.rp-leg .sw {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
+.rp-leg b,
+.rp-leg small {
+  display: block;
+}
+.rp-leg .amt {
+  text-align: right;
+}
+.rp-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid #e9edf4;
+}
+.rp-cat .t {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+}
+.rp-cat .t span {
+  font-size: 13px;
+  color: #526175;
+}
+@media (max-width: 760px) {
+  .report-kpis .webix_template {
+    grid-template-columns: 1fr;
+  }
+  .manager-kpis.report-kpis {
+    height: 420px !important;
+  }
+}
+
+/* Laporan header fixes: chip border and clipped export button */
+.report-period {
+  border: 0 !important;
+  background: transparent;
+}
+.report-export,
+.report-export .webix_el_box {
+  height: 44px !important;
+  overflow: visible;
+}
+.report-export .webix_el_box {
+  padding: 0 !important;
 }
