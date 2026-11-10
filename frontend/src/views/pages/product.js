@@ -68,17 +68,11 @@ function pageItems(cur, total) {
 /* ---------- Potongan HTML ---------- */
 function statsHtml() {
   const low = state.products.filter(lowStock);
-  const names = low
-    .slice(0, 2)
-    .map((p) => p.name)
-    .join(", ");
-  const more = low.length > 2 ? ` dan ${low.length - 2} lainnya` : "";
   const active = state.products.filter((p) => p.active).length;
   return `
-    <div class="pd-stat"><span>Total produk</span><strong>${state.products.length}</strong><small>Di ${state.categories.length} kategori</small></div>
-    <div class="pd-stat"><span>Aktif</span><strong>${active}</strong><small>Tampil di layar kasir</small></div>
-    <div class="pd-stat warn"><span>Stok menipis</span><strong>${low.length}</strong>
-      <small title="${escape(low.map((p) => p.name).join(", "))}">${low.length ? escape(names + more) : "Semua stok aman"}</small></div>`;
+    <div class="pd-stat"><span>Total produk</span><strong>${state.products.length}</strong></div>
+    <div class="pd-stat"><span>Aktif</span><strong>${active}</strong></div>
+    <div class="pd-stat warn"><span>Stok menipis</span><strong>${low.length}</strong></div>`;
 }
 function chipsHtml() {
   const chip = (value, label, count) =>
@@ -290,7 +284,7 @@ export function products(refresh) {
   }
   return {
     view: "template",
-    css: "product-page",
+    css: "product-page catalog-page",
     borderless: true,
     template: shell,
     on: {

@@ -432,17 +432,18 @@ small {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   height: 100%;
-  padding: 10px 0;
+  padding: 8px 0;
   gap: 20px;
 }
 .manager-kpis .webix_template > div {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 10px;
   min-width: 0;
 }
 .manager-kpis .webix_template > div {
-  padding: 16px 18px;
+  padding: 12px 16px;
   border-radius: 14px;
   background: #fff;
   border: 1px solid #e9edf5;
@@ -1429,6 +1430,55 @@ small {
 .pd-stat.warn strong {
   color: #8a4b00;
 }
+.stock-page .pd-stats,
+.shift-page .pd-stats,
+.catalog-page .pd-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+.stock-page .pd-stat,
+.shift-page .pd-stat,
+.catalog-page .pd-stat {
+  position: relative;
+  min-height: 104px;
+  box-sizing: border-box;
+  padding: 14px 18px;
+  border: 1px solid #dfe6f1;
+  border-radius: 16px;
+  background: #fff;
+}
+.stock-page .pd-stat + .pd-stat,
+.shift-page .pd-stat + .pd-stat,
+.catalog-page .pd-stat + .pd-stat {
+  border-left: 1px solid #dfe6f1;
+}
+.stock-page .pd-stat-icon,
+.shift-page .pd-stat-icon,
+.catalog-page .pd-stat-icon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: #e8efff;
+  color: #2453dc;
+}
+.pd-stat-icon .pd-ico {
+  width: 22px;
+  height: 22px;
+}
+.pd-stat-icon.green { background: #e3f5eb; color: #197344; }
+.pd-stat-icon.amber { background: #fff0d0; color: #945a00; }
+.pd-stat-icon.orange { background: #ffead8; color: #a3471d; }
+.stock-page .pd-stat > span,
+.shift-page .pd-stat > span,
+.catalog-page .pd-stat > span { padding-right: 52px; }
 .pd-filters {
   display: flex;
   align-items: center;
@@ -1862,5 +1912,269 @@ small {
 @media (max-width: 760px) {
   .pd-head {
     flex-wrap: wrap;
+  }
+}
+
+/* ===== Shift kasir redesign (memakai komponen pd- dari halaman Produk) ===== */
+.sh-panel {
+  padding: 26px 28px;
+}
+.sh-state {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.sh-state-ico {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #526175;
+}
+.sh-state.open .sh-state-ico {
+  background: #e3f5eb;
+  color: #197344;
+}
+.sh-state-ico .pd-ico {
+  width: 24px;
+  height: 24px;
+}
+.sh-state-text {
+  flex: 1;
+  min-width: 0;
+}
+.sh-state-text h2 {
+  font-size: 24px;
+}
+.sh-state-text p {
+  margin: 5px 0 0;
+  font-size: 15px;
+  color: #69778e;
+}
+.sh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 40px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border-radius: 99px;
+  background: #eef2f8;
+  color: #334155;
+  font-weight: 600;
+}
+.sh-badge span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+.sh-badge.good {
+  background: #e3f5eb;
+  color: #197344;
+}
+.sh-badge.good span {
+  background: #199255;
+}
+.sh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 22px;
+  border: 1px solid #d8e0ec;
+  border-radius: 12px;
+  background: #fff;
+  color: #1d4ed8;
+  font:
+    600 15px Outfit,
+    sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sh-btn.primary {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.sh-btn.primary:hover {
+  background: #1e40af;
+}
+.sh-btn.danger {
+  border-color: #dc3e32;
+  color: #bd2c23;
+}
+.sh-btn.danger:hover {
+  background: #fff5f4;
+}
+.sh-btn:focus-visible {
+  outline: 2px solid #2453dc;
+  outline-offset: 2px;
+}
+.sh-caption {
+  margin: 26px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #526175;
+}
+.sh-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.sh-slot {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  border: 1px solid #dfe6f1;
+  border-radius: 14px;
+  background: #fff;
+}
+.sh-slot > div {
+  flex: 1;
+  min-width: 0;
+}
+.sh-slot b {
+  display: block;
+  font:
+    700 18px Urbanist,
+    sans-serif;
+}
+.sh-slot span {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #69778e;
+}
+.sh-slot-ico {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+  background: #fff0d0;
+  color: #945a00;
+}
+.sh-slot-ico.moon {
+  background: #e8efff;
+  color: #2453c9;
+}
+.sh-slot-ico .pd-ico {
+  width: 22px;
+  height: 22px;
+}
+.sh-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 99px;
+  background: #eef1f6;
+  color: #536177;
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sh-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-size: 13px;
+  color: #69778e;
+}
+.sh-note .pd-ico {
+  width: 16px;
+  height: 16px;
+}
+.sh-hist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 26px 18px;
+}
+.sh-hist-head h2 {
+  font-size: 20px;
+}
+.sh-hist-head p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #69778e;
+}
+.sh-hist-head + .pd-scroll .pd-table thead th,
+.sh-hist-head + .sh-empty {
+  border-top: 1px solid #e8edf4;
+}
+.sh-table {
+  min-width: 760px;
+}
+.sh-c-time,
+.sh-c-closed {
+  width: 190px;
+}
+.sh-c-status {
+  width: 140px;
+}
+.sh-c-money {
+  width: 190px;
+}
+.sh-who {
+  font-weight: 600;
+  font-size: 15px;
+}
+.sh-money {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sh-reason {
+  display: block;
+  max-width: 220px;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: #69778e;
+}
+.sh-empty {
+  padding: 54px 20px 60px;
+  text-align: center;
+}
+.sh-empty i {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #eef2f8;
+  color: #526175;
+}
+.sh-empty b {
+  font:
+    700 18px Urbanist,
+    sans-serif;
+}
+.sh-empty p {
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  color: #69778e;
+}
+@media (max-width: 900px) {
+  .sh-state {
+    flex-wrap: wrap;
+  }
+  .sh-slots {
+    grid-template-columns: 1fr;
   }
 }

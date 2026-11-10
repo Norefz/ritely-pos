@@ -126,9 +126,9 @@ export function dashboard(navigate) {
         },
         {
           view: "template",
-          height: 148,
+          height: 120,
           css: "manager-kpis",
-          template: `<div class="kpi-sales"><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong><small>dari transaksi lunas</small></div><div class="kpi-count"><span>Transaksi</span><strong>${count}</strong><small>selesai & dibayar</small></div><div class="kpi-average"><span>Rata-rata / transaksi</span><strong class="kpi-money">${money(avg)}</strong><small>per sale</small></div><div class="kpi-shifts"><span>Shift terbuka</span><strong>1 dari 2</strong><small>Shift 2 mulai 15.00</small></div>`,
+          template: `<div class="kpi-sales"><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong></div><div class="kpi-count"><span>Transaksi</span><strong>${count}</strong></div><div class="kpi-average"><span>Rata-rata / transaksi</span><strong class="kpi-money">${money(avg)}</strong></div><div class="kpi-shifts"><span>Shift terbuka</span><strong>1 dari 2</strong></div>`,
         },
         {
           height: 380,

@@ -131,9 +131,9 @@ export function reports() {
   const panelsH = Math.max(leftH, payH + 16 + catH);
 
   const kpiTemplate =
-    `<div><i class="kpi-icon" style="background:#e8efff;color:#1d4ed8">${ICON_MONEY}</i><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong><small>Berdasarkan waktu pembayaran</small></div>` +
-    `<div><i class="kpi-icon" style="background:#e3f5eb;color:#197344">${ICON_RECEIPT}</i><span>Transaksi</span><strong>${demoOnly ? 86 : sales.length}</strong><small>${demoOnly ? "Data contoh" : "Transaksi demo selesai"}</small></div>` +
-    `<div><i class="kpi-icon" style="background:#ffead8;color:#a3471d">${ICON_BOX}</i><span>Unit terjual</span><strong>${unitCount}</strong><small>Dari seluruh produk</small></div>`;
+    `<div><i class="kpi-icon" style="background:#e8efff;color:#1d4ed8">${ICON_MONEY}</i><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong></div>` +
+    `<div><i class="kpi-icon" style="background:#e3f5eb;color:#197344">${ICON_RECEIPT}</i><span>Transaksi</span><strong>${demoOnly ? 86 : sales.length}</strong></div>` +
+    `<div><i class="kpi-icon" style="background:#ffead8;color:#a3471d">${ICON_BOX}</i><span>Unit terjual</span><strong>${unitCount}</strong></div>`;
 
   let page = 0;
   const renderList = () => {
@@ -223,7 +223,7 @@ export function reports() {
         },
         {
           view: "template",
-          height: 148,
+          height: 120,
           css: "manager-kpis report-kpis",
           template: kpiTemplate,
         },

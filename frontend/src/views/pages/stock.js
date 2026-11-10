@@ -70,18 +70,12 @@ function pillHtml() {
 }
 function statsHtml() {
   const low = state.products.filter(lowStock);
-  const names = low
-    .slice(0, 2)
-    .map((p) => p.name)
-    .join(", ");
-  const more = low.length > 2 ? ` dan ${low.length - 2} lainnya` : "";
   const units = state.products.reduce((sum, p) => sum + (+p.stock || 0), 0);
   const moves = state.movements.length;
   return `
-    <div class="pd-stat"><span>Total unit stok</span><strong>${units}</strong><small>Di ${state.products.length} produk</small></div>
-    <div class="pd-stat warn"><span>Stok menipis</span><strong>${low.length}</strong>
-      <small title="${escape(low.map((p) => p.name).join(", "))}">${low.length ? escape(names + more) : "Semua stok aman"}</small></div>
-    <div class="pd-stat"><span>Penyesuaian sesi ini</span><strong>${moves}</strong><small>${moves ? "Tercatat dengan alasan" : "Belum ada perubahan stok"}</small></div>`;
+    <div class="pd-stat"><i class="pd-stat-icon blue">${svg('<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>')}</i><span>Total unit stok</span><strong>${units}</strong></div>
+    <div class="pd-stat warn"><i class="pd-stat-icon amber">${svg('<path d="M12 3 2.8 20h18.4L12 3zM12 9v5M12 17h.01"/>')}</i><span>Stok menipis</span><strong>${low.length}</strong></div>
+    <div class="pd-stat"><i class="pd-stat-icon green">${svg('<path d="M4 7h16M4 12h16M4 17h10"/><path d="m16 16 2 2 4-4"/>')}</i><span>Penyesuaian sesi ini</span><strong>${moves}</strong></div>`;
 }
 function chipsHtml() {
   const low = state.products.filter(lowStock).length;
@@ -253,7 +247,7 @@ export function stock(refresh) {
   }
   return {
     view: "template",
-    css: "product-page",
+    css: "product-page stock-page",
     borderless: true,
     template: shell,
     on: {
