@@ -1,6 +1,16 @@
 import { state, money, total, uid, categoryName } from "../../demo.js";
 import { heading, editor, receipt, button } from "./common.js";
 const colors = ["blue", "orange", "green", "purple"];
+const productImages = {
+  "Air mineral 600 ml": "https://www.spiresmarket.com/cdn/shop/files/bc2482ea-0b41-49ed-b9e4-7826543c328f_c46380db-a575-422e-85ce-689c25c9327e.jpg?v=1736449123",
+  "Teh melati 350 ml": "https://www.nongfuspring.com.my/cdn/shop/files/imgi_3_3d2cf06d020d4383b369f41a43cb23e5.png?format=webp&v=1775638029&width=600",
+  "Susu UHT cokelat 250 ml": "https://cdnprod.mafretailproxy.com/sys-master-root/hf6/h1d/12463115927582/43287_Main.jpg_480Wx480H",
+  "Roti gandum": "https://kibsecomimgstore.blob.core.windows.net/products/detail/HPL_SDBWHAEPD350LF_20250828171420.jpg",
+  "Biskuit kelapa 300 g": "https://kuwait.grandhyper.com/image/cache/catalog/products/1/101060026235-1000x1000.jpg",
+  "Mi instan goreng": "https://down-id.img.susercontent.com/file/1d4a20c87717dada5aec5749911f50a5",
+  "Tisu wajah 200 lembar": "https://images.cdn.retail.brookshires.com/detail/00011225136566_C1C1.jpeg",
+  "Sabun cuci piring 750 ml": "https://4.bp.blogspot.com/-jsdWrh0qoY4/UMHl4BlLfkI/AAAAAAAACcw/VoJfCV_wXWc/s1600/12158liquid_soap.jpg",
+};
 export function pos(refresh) {
   function add(id) {
     if (!state.shift) {
@@ -107,7 +117,7 @@ export function pos(refresh) {
       .slice(0, 2)
       .map((w) => w[0])
       .join("")
-      .toUpperCase()}</span></div><strong>${p.name}</strong><b>${money(p.price)}</b><span class="stock-tag ${p.stock <= p.minimum ? "warning" : "good"}">${p.stock <= p.minimum ? "Sisa " + p.stock : "Stok " + p.stock}</span></div>`;
+      .toUpperCase()}</span>${productImages[p.name] ? `<img src="${productImages[p.name]}" alt="${p.name}" loading="lazy" onerror="this.remove()">` : ""}</div><strong>${p.name}</strong><b>${money(p.price)}</b><span class="stock-tag ${p.stock <= p.minimum ? "warning" : "good"}">${p.stock <= p.minimum ? "Sisa " + p.stock : "Stok " + p.stock}</span></div>`;
   const cartRows = () =>
     state.cart.length
       ? state.cart
@@ -122,7 +132,7 @@ export function pos(refresh) {
     css: "cart-lines",
     height: state.cart.length
       ? Math.min(250, Math.max(92, state.cart.length * 76))
-      : 150,
+      : 112,
     template: cartRows,
     onClick: {
       "qty-minus": (e) =>
@@ -188,6 +198,7 @@ export function pos(refresh) {
         ],
       },
       {
+        gravity: 1,
         cols: [
           {
             view: "dataview",
@@ -212,7 +223,7 @@ export function pos(refresh) {
               basket,
               {
                 view: "template",
-                height: 110,
+                height: 88,
                 css: "cart-sum",
                 template: `<div><span>Subtotal</span><span>${money(total())}</span></div><div><strong>Total</strong><strong>${money(total())}</strong></div>`,
               },
@@ -269,6 +280,7 @@ export function pos(refresh) {
                 ...button(`Bayar ${money(total())}`, pay, true),
                 autowidth: false,
                 css: "checkout-button",
+                height: 64,
               },
             ],
           },

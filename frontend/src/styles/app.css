@@ -751,6 +751,8 @@ small {
   color: #2453dc;
 }
 .product-art {
+  position: relative;
+  overflow: hidden;
   height: 112px;
   border-radius: 12px;
   display: grid;
@@ -761,6 +763,8 @@ small {
   color: #2250b9;
   background: #dfebff;
 }
+.product-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:8px;box-sizing:border-box;background:#fff}
+.product-art>span{z-index:0}
 .product-art.orange {
   background: #ffead8;
   color: #a3471d;
@@ -908,6 +912,7 @@ small {
   height: 58px !important;
   border-radius: 12px !important;
   background: #2453dc !important;
+  color:#fff!important;
   font-size: 17px !important;
   font-weight: 600 !important;
 }

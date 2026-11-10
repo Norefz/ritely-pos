@@ -2,14 +2,12 @@ import { state } from "./demo.js";
 import { sidebar, menus } from "./views/layout/sidebar.js";
 import { navbar } from "./views/layout/navbar.js";
 import { dashboard } from "./views/pages/dashboard.js";
-import { products, categories, stock } from "./views/pages/products.js";
+import { products, categories, stock } from "./views/pages/product.js";
 import { pos } from "./views/pages/pos.js";
-import {
-  transactions,
-  shifts,
-  reports,
-  users,
-} from "./views/pages/operations.js";
+import { transactions } from "./views/pages/transactions.js";
+import { shifts } from "./views/pages/shifts.js";
+import { reports } from "./views/pages/reports.js";
+import { users } from "./views/pages/users.js";
 let current = "dashboard";
 const factories = {
   dashboard: () => dashboard(navigate),
