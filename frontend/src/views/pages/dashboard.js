@@ -1,16 +1,16 @@
 import { state, money, date, completed } from "../../demo.js";
 import { heading, table, button } from "./common.js";
 const hourly = [
-  ["08.00", 0.4],
-  ["09.00", 0.7],
-  ["10.00", 0.9],
-  ["11.00", 1.1],
-  ["12.00", 1.8],
-  ["13.00", 1.5],
-  ["14.00", 1],
-  ["15.00", 0.8],
-  ["16.00", 1.2],
-  ["17.00", 1.6],
+  ["08.00", 4],
+  ["09.00", 7],
+  ["10.00", 9],
+  ["11.00", 11],
+  ["12.00", 18],
+  ["13.00", 15],
+  ["14.00", 10],
+  ["15.00", 8],
+  ["16.00", 12],
+  ["17.00", 16],
 ];
 const demoSales = [
   {
@@ -53,6 +53,17 @@ const demoSales = [
     status: "completed",
     payment_status: "paid",
   },
+  ...Array.from({ length: 15 }, (_, index) => {
+    const number = 81 - index;
+    return {
+      id: `RTL-${String(number).padStart(6, "0")}`,
+      cashier: index % 2 ? "Dewi" : "Rani",
+      payment_method: index % 3 ? "cash" : "online",
+      total: [32000, 78500, 12500, 96000, 45000][index % 5],
+      status: "completed",
+      payment_status: "paid",
+    };
+  }),
 ];
 const e = (s) =>
   String(s).replace(
@@ -63,7 +74,8 @@ const e = (s) =>
       ],
   );
 function hourlyChart() {
-  return `<div class="chart-bars">${hourly.map(([hour, value], i) => `<div class="chart-col"><b>${value.toFixed(1)}</b><span class="chart-bar ${i === 4 ? "peak" : ""}" style="height:${Math.round((value / 1.8) * 192)}px"></span><small>${hour}</small></div>`).join("")}</div>`;
+  const peak = Math.max(...hourly.map(([, value]) => value));
+  return `<div class="chart-bars">${hourly.map(([hour, value], i) => `<div class="chart-col"><b>${value}</b><span class="chart-bar ${i === 4 ? "peak" : ""}" style="height:${Math.round((value / peak) * 192)}px"></span><small>${hour}</small></div>`).join("")}</div>`;
 }
 function shiftsPanel() {
   if (state.shift)
@@ -96,29 +108,30 @@ export function dashboard(navigate) {
       margin: 16,
       rows: [
         {
+          height: 84,
           cols: [
             heading("Dasbor hari ini", currentDate + " · data contoh"),
             {},
             {
               ...button("Hari ini", () => {}),
               height: 56,
-              css: "dashboard-action",
+              css: "dashboard-action today-action",
             },
             {
               ...button("Lihat laporan", () => navigate("reports"), true),
               height: 56,
-              css: "dashboard-action",
+              css: "dashboard-action report-action",
             },
           ],
         },
         {
           view: "template",
-          height: 126,
+          height: 148,
           css: "manager-kpis",
-          template: `<div><span>Total penjualan</span><strong>${money(revenue)}</strong><small>dari transaksi lunas</small></div><div><span>Transaksi</span><strong>${count}</strong><small>selesai & dibayar</small></div><div><span>Rata-rata / transaksi</span><strong>${money(avg)}</strong><small>per sale</small></div><div><span>Shift terbuka</span><strong>1 dari 2</strong><small>Shift 2 mulai 15.00</small></div>`,
+          template: `<div class="kpi-sales"><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong><small>dari transaksi lunas</small></div><div class="kpi-count"><span>Transaksi</span><strong>${count}</strong><small>selesai & dibayar</small></div><div class="kpi-average"><span>Rata-rata / transaksi</span><strong class="kpi-money">${money(avg)}</strong><small>per sale</small></div><div class="kpi-shifts"><span>Shift terbuka</span><strong>1 dari 2</strong><small>Shift 2 mulai 15.00</small></div>`,
         },
         {
-          height: 330,
+          height: 380,
           margin: 16,
           cols: [
             {
@@ -130,7 +143,7 @@ export function dashboard(navigate) {
                   height: 54,
                   css: "panel-heading",
                   template:
-                    "<h2>Penjualan per jam</h2><span>Rp juta · berdasarkan waktu bayar</span>",
+                    "<h2>Transaksi per jam</h2><span>Jumlah transaksi · berdasarkan waktu bayar</span>",
                 },
                 { view: "template", css: "sales-chart", template: hourlyChart },
               ],
@@ -210,8 +223,8 @@ export function dashboard(navigate) {
                       css: "numeric",
                     },
                   ],
-                  shown.slice(-5).reverse(),
-                  { height: 300, scrollX: false, scrollY: false },
+                  [...shown].reverse(),
+                  { height: 300, scrollX: false, scrollY: true },
                 ),
               ],
             },
