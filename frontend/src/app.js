@@ -9,6 +9,7 @@ import { transactions } from "./views/pages/transactions.js";
 import { shifts } from "./views/pages/shifts.js";
 import { reports } from "./views/pages/reports.js";
 import { users } from "./views/pages/users.js";
+import { audit } from "./views/pages/audit.js";
 let current = "dashboard";
 const factories = {
   dashboard: () => dashboard(navigate),
@@ -20,7 +21,7 @@ const factories = {
   shifts: () => shifts(refresh),
   reports,
   users: () => users(refresh),
-  audit: () => ({rows:[{view:"template",height:88,css:"page-heading",template:"<h1>Log audit</h1><p>Riwayat aktivitas akan tersedia setelah backend tersambung.</p>"}]}),
+  audit,
 };
 function refresh() {
   const host = $$("contentHost");
