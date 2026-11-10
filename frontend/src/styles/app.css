@@ -1473,12 +1473,23 @@ small {
   width: 22px;
   height: 22px;
 }
-.pd-stat-icon.green { background: #e3f5eb; color: #197344; }
-.pd-stat-icon.amber { background: #fff0d0; color: #945a00; }
-.pd-stat-icon.orange { background: #ffead8; color: #a3471d; }
+.pd-stat-icon.green {
+  background: #e3f5eb;
+  color: #197344;
+}
+.pd-stat-icon.amber {
+  background: #fff0d0;
+  color: #945a00;
+}
+.pd-stat-icon.orange {
+  background: #ffead8;
+  color: #a3471d;
+}
 .stock-page .pd-stat > span,
 .shift-page .pd-stat > span,
-.catalog-page .pd-stat > span { padding-right: 52px; }
+.catalog-page .pd-stat > span {
+  padding-right: 52px;
+}
 .pd-filters {
   display: flex;
   align-items: center;
@@ -2177,4 +2188,66 @@ small {
   .sh-slots {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== Akun kasir redesign (memakai komponen pd- dari halaman Produk) ===== */
+.us-c-user {
+  width: 170px;
+}
+.us-c-slot {
+  width: 290px;
+}
+.us-c-status {
+  width: 130px;
+}
+.us-c-act {
+  width: 130px;
+}
+.us-table {
+  min-width: 820px;
+}
+.us-who b {
+  display: block;
+  font-weight: 600;
+  font-size: 15px;
+}
+.us-who small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: #69778e;
+}
+.us-handle {
+  color: #526175;
+  letter-spacing: 0.01em;
+}
+.us-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: 99px;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.us-slot .pd-ico {
+  width: 16px;
+  height: 16px;
+}
+.us-slot.a {
+  background: #fff3d6;
+  color: #7a4c00;
+}
+.us-slot.b {
+  background: #e8efff;
+  color: #2453c9;
+}
+.us-none {
+  color: #69778e;
+  font-size: 13.5px;
+}
+.pd-stat.warn small {
+  color: #945a00;
 }
