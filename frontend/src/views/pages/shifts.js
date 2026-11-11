@@ -1,7 +1,7 @@
 import { state, money, date, completed, uid, escape } from "../../demo.js";
 import { editor } from "./common.js";
 
-/* ---------- Halaman Shift kasir: konfigurasi & helper ---------- */
+/* ---------- Halaman Shift manajer: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
 const view = { page: 1 }; // halaman riwayat bertahan saat refresh() membangun ulang halaman
 
@@ -48,6 +48,9 @@ const salesOf = (shift) =>
     .filter((s) => s.shift_id === shift.id)
     .reduce((n, s) => n + s.total, 0);
 
+const cashierName = () =>
+  state.users.find((user) => user.username === "dina")?.name || "Dina Pratiwi";
+
 function pageItems(cur, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const set = new Set([1, total, cur - 1, cur, cur + 1]);
@@ -82,27 +85,21 @@ function scheduleHtml() {
   ).join("");
 }
 function statusHtml() {
-  const open = !!state.shift;
-  const manager = state.role === "manager";
-  const cashier = state.role === "cashier";
+  const openShift = state.shift;
+  const open = !!openShift;
+  const manager = true;
   const action = open
     ? `<button type="button" class="sh-btn${manager ? " danger" : " primary"}" data-act="close">${manager ? "Tutup paksa demo" : "Tutup shift demo"}</button>`
-    : cashier
-      ? `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift demo</button>`
-      : "";
-  const title = open ? "Shift demo sedang berjalan" : "Belum ada shift terbuka";
+    : "";
+  const title = open
+    ? "Shift demo sedang berjalan"
+    : "Belum ada shift terbuka";
   const sub = open
-    ? `${escape(state.shift.cashier || "Dina Pratiwi")} · Dibuka ${escape(date(state.shift.opened_at))}`
-    : cashier
-      ? "Buka shift untuk mulai mencatat transaksi."
-      : "Transaksi kasir baru bisa dicatat setelah seorang kasir membuka shift.";
+    ? `${escape(openShift.cashier || cashierName())} · Dibuka ${escape(date(openShift.opened_at))}`
+    : "Transaksi kasir baru bisa dicatat setelah seorang kasir membuka shift.";
   const note = open
-    ? manager
-      ? "Penutupan paksa oleh Manajer wajib disertai alasan dan akan tercatat pada riwayat."
-      : "Pastikan keranjang kosong sebelum menutup shift."
-    : cashier
-      ? "Mode demo: shift dapat dibuka dan ditutup kapan saja."
-      : "Shift dibuka oleh kasir dari halaman Kasir. Manajer dapat melakukan penutupan paksa saat shift berjalan.";
+    ? "Penutupan paksa oleh Manajer wajib disertai alasan dan akan tercatat pada riwayat."
+    : "Shift dibuka oleh kasir dari halaman Kasir. Manajer dapat melakukan penutupan paksa saat shift berjalan.";
   return `
     <div class="sh-state${open ? " open" : ""}">
       <i class="sh-state-ico">${open ? icons.play : icons.lock}</i>
@@ -161,7 +158,7 @@ function historyHtml() {
 function shell() {
   return `
     <div class="pd-head">
-      <div><h1>Shift kasir</h1><p>Mode demo: pembukaan dan penutupan bebas waktu. Hanya satu shift terbuka.</p></div>
+      <div><h1>Shift</h1><p>Pantau dan kelola shift kasir toko.</p></div>
     </div>
     <section class="pd-card pd-stats">${statsHtml()}</section>
     <section class="pd-card sh-panel">${statusHtml()}</section>
@@ -185,6 +182,13 @@ function bind(root, actions) {
 
 export function shifts(refresh) {
   function close(reason = "") {
+    if (!state.shift) {
+      webix.message({
+        type: "error",
+        text: "Tidak ada shift yang sedang berjalan.",
+      });
+      return false;
+    }
     if (state.cart.length) {
       webix.message({
         type: "error",
@@ -202,9 +206,16 @@ export function shifts(refresh) {
   }
   const actions = {
     open() {
+      if (state.shift) {
+        webix.message({
+          type: "error",
+          text: "Selesaikan shift yang sedang berjalan sebelum membuka shift baru.",
+        });
+        return;
+      }
       const s = {
         id: uid(),
-        cashier: "Dina Pratiwi",
+        cashier: cashierName(),
         status: "open",
         opened_at: new Date().toISOString(),
       };
@@ -214,28 +225,22 @@ export function shifts(refresh) {
       refresh();
     },
     close() {
-      if (state.role === "manager")
-        editor(
-          "Penutupan paksa",
-          [
-            {
-              view: "textarea",
-              name: "reason",
-              label: "Alasan penutupan",
-              required: true,
-            },
-          ],
-          {},
-          (v) => {
-            if (!v.reason.trim()) return false;
-            return close(v.reason);
+      editor(
+        "Penutupan paksa",
+        [
+          {
+            view: "textarea",
+            name: "reason",
+            label: "Alasan penutupan",
+            required: true,
           },
-        );
-      else
-        webix
-          .confirm("Tutup shift demo ini?")
-          .then(() => close())
-          .catch(() => {});
+        ],
+        {},
+        (v) => {
+          if (!v.reason.trim()) return false;
+          return close(v.reason);
+        },
+      );
     },
   };
   return {

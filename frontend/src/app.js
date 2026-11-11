@@ -7,6 +7,7 @@ import { stock } from "./views/pages/stock.js";
 import { pos } from "./views/pages/pos.js";
 import { transactions } from "./views/pages/transactions.js";
 import { shifts } from "./views/pages/shifts.js";
+import { myShifts } from "./views/pages/my-shifts.js";
 import { reports } from "./views/pages/reports.js";
 import { users } from "./views/pages/users.js";
 import { audit } from "./views/pages/audit.js";
@@ -18,7 +19,8 @@ const factories = {
   stock: () => stock(refresh),
   pos: () => pos(refresh),
   transactions,
-  shifts: () => shifts(refresh),
+  shifts: () =>
+    state.role === "cashier" ? myShifts(refresh) : shifts(refresh),
   reports,
   users: () => users(refresh),
   audit,
