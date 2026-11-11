@@ -9,7 +9,7 @@ const jakartaTime = () =>
     hour12: false,
   }).format(new Date());
 
-export function navbar(role, changeRole) {
+export function navbar(role, logout) {
   return {
     view: "toolbar",
     id: "navbar",
@@ -32,8 +32,9 @@ export function navbar(role, changeRole) {
         view: "label",
         id: "pageTitle",
         label: "Ringkasan",
-        width: innerWidth < 420 ? 62 : undefined,
+        width: 120,
       },
+      { view: "spacer", gravity: 100 },
       {
         view: "template",
         id: "cashierIdentity",
@@ -67,17 +68,14 @@ export function navbar(role, changeRole) {
         },
       },
       {
-        view: "select",
-        id: "roleSelector",
-        label: innerWidth < 600 ? "" : "Demo sebagai",
-        labelWidth: innerWidth < 600 ? 0 : 100,
-        width: innerWidth < 420 ? 96 : innerWidth < 600 ? 140 : 235,
-        value: role,
-        options: [
-          { id: "manager", value: "Manajer" },
-          { id: "cashier", value: "Kasir" },
-        ],
-        on: { onChange: changeRole },
+        view: "button",
+        id: "logoutButton",
+        value: "Keluar",
+        tooltip: "Keluar dari akun",
+        ariaLabel: "Keluar dari akun",
+        width: innerWidth < 420 ? 60 : 76,
+        css: "logout-button",
+        click: logout,
       },
     ],
   };

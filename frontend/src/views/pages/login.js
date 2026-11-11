@@ -1,15 +1,20 @@
 /* ---------- Halaman Login (FE demo) ----------
-   Satu form untuk Manajer dan Admin: keduanya digabung menjadi satu role
-   "manager" (SRS: role Admin terpisah tidak termasuk MVP).
+   Login demo menyediakan role "manager" dan "cashier" sesuai SRS.
    Ini hanya validasi sisi browser untuk mode demo. Saat backend tersambung,
    ganti isi `authenticate` dengan panggilan API. */
 
-export const LOGIN_ROLE = "manager";
 const DEMO_PASSWORD = "ritely123";
-const ACCOUNTS = { manajer: DEMO_PASSWORD, admin: DEMO_PASSWORD };
+const ACCOUNTS = {
+  manajer: { password: DEMO_PASSWORD, role: "manager" },
+  dina: { password: DEMO_PASSWORD, role: "cashier" },
+};
 
-const authenticate = (username, password) =>
-  Object.hasOwn(ACCOUNTS, username) && ACCOUNTS[username] === password;
+const authenticate = (username, password) => {
+  const account = Object.hasOwn(ACCOUNTS, username)
+    ? ACCOUNTS[username]
+    : null;
+  return account?.password === password ? account : null;
+};
 
 const svg = (path) =>
   `<svg class="lg-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -46,9 +51,9 @@ function shell() {
       </aside>
       <main class="lg-main">
         <div class="lg-card">
-          <span class="lg-role">Untuk Manajer dan Admin</span>
+          <span class="lg-role">Untuk Manajer dan Kasir</span>
           <h2>Masuk ke Ritely</h2>
-          <p class="lg-sub">Gunakan akun manajemen untuk membuka dasbor, produk, stok, dan laporan.</p>
+          <p class="lg-sub">Masuk dengan akun Manajer atau Kasir untuk melanjutkan.</p>
           <form class="lg-form" novalidate>
             <div class="lg-error" data-part="error" role="alert" hidden></div>
             <label class="lg-field"><span>Username</span>
@@ -63,8 +68,11 @@ function shell() {
             <button type="submit" class="lg-submit">Masuk</button>
           </form>
           <div class="lg-demo">
-            <div>${icons.info}<span>Mode demo · akun contoh <b>manajer</b> atau <b>admin</b>, kata sandi <b>${DEMO_PASSWORD}</b></span></div>
-            <button type="button" class="lg-fill" data-act="fill">Isi otomatis</button>
+            <div>${icons.info}<span>Mode demo · username <b>manajer</b> / <b>dina</b> · kata sandi <b>${DEMO_PASSWORD}</b></span></div>
+            <div class="lg-fill-actions">
+              <button type="button" class="lg-fill" data-act="fill" data-user="manajer">Manajer</button>
+              <button type="button" class="lg-fill" data-act="fill" data-user="dina">Kasir</button>
+            </div>
           </div>
         </div>
       </main>
@@ -96,7 +104,7 @@ function bind(root, onSuccess) {
       );
       el.innerHTML = show ? icons.eyeOff : icons.eye;
     } else if (el.dataset.act === "fill") {
-      field("username").value = "manajer";
+      field("username").value = el.dataset.user || "manajer";
       field("password").value = DEMO_PASSWORD;
       showError(root, "");
       field("password").focus();
@@ -109,19 +117,20 @@ function bind(root, onSuccess) {
     const password = field("password").value;
     if (!username || !password)
       return showError(root, "Isi username dan kata sandi.");
-    if (!authenticate(username, password)) {
+    const account = authenticate(username, password);
+    if (!account) {
       showError(root, "Username atau kata sandi salah.");
       field("password").value = "";
       field("password").focus();
       return;
     }
-    onSuccess(LOGIN_ROLE, { username });
+    onSuccess(account.role, { username });
   });
 }
 
 /* Pemakaian:
    webix.ui(login((role, user) => { state.role = role; ...mulai aplikasi... }));
-   `role` selalu "manager" untuk akun manajer maupun admin. */
+   `role` bernilai "manager" atau "cashier" sesuai akun demo. */
 export function login(onSuccess = () => {}) {
   return {
     view: "template",

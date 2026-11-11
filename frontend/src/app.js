@@ -47,18 +47,19 @@ function navigate(id) {
   history.replaceState(null, "", "#" + id);
   if (innerWidth < 900) $$("sidebar").hide();
 }
-function changeRole(role) {
-  state.role = role;
-  $$("sidebarProfile").refresh();
-  const cashierIdentity = $$("cashierIdentity");
-  if (cashierIdentity) {
-    if (role === "cashier") cashierIdentity.show();
-    else cashierIdentity.hide();
+function logout() {
+  const finishLogout = () => {
+    history.replaceState(null, "", location.pathname);
+    window.location.reload();
+  };
+  if (state.cart.length) {
+    webix
+      .confirm("Keranjang demo akan dikosongkan. Keluar dari akun?")
+      .then(finishLogout)
+      .catch(() => {});
+    return;
   }
-  const nav = $$("navigation");
-  nav.clearAll();
-  nav.parse(menus[role].map(([id, value]) => ({ id, value })));
-  navigate(menus[role][0][0]);
+  finishLogout();
 }
 function mountApplication() {
   document.getElementById("app").replaceChildren();
@@ -69,7 +70,7 @@ function mountApplication() {
       sidebar(state.role, navigate),
       {
         rows: [
-          navbar(state.role, changeRole),
+          navbar(state.role, logout),
           {
             view: "template",
             height: 42,

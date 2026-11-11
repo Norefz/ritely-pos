@@ -214,6 +214,78 @@ small {
   background: white;
   border-bottom: 1px solid var(--line);
 }
+.logout-button .webix_button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+}
+.logout-button .webix_button:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: var(--navy);
+}
+.cashier-identity .webix_template {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 0 8px;
+  overflow: hidden;
+}
+.cashier-identity-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.cashier-avatar {
+  display: block;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e0f2fe;
+}
+.cashier-details,
+.cashier-clock {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  gap: 2px;
+}
+.cashier-details strong,
+.cashier-clock strong {
+  color: var(--navy);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+.cashier-details span,
+.cashier-clock span {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+.cashier-clock {
+  flex: 0 0 auto;
+  border-left: 1px solid var(--line);
+  margin-left: 2px;
+  padding-left: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.cashier-clock span {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
 .demo-banner .webix_template {
   background: #eff6ff;
   color: #1e40af;
@@ -3113,6 +3185,11 @@ small {
     sans-serif;
   cursor: pointer;
 }
+.lg-fill-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
 @media (max-width: 900px) {
   .lg-wrap {
     grid-template-columns: 1fr;
@@ -3133,5 +3210,44 @@ small {
   }
   .lg-card {
     padding: 28px 22px;
+  }
+}
+@media (max-width: 520px) {
+  .lg-demo {
+    flex-wrap: wrap;
+  }
+  .lg-demo > div:first-child {
+    flex: 1 1 160px;
+  }
+  .lg-fill-actions {
+    margin-left: auto;
+  }
+}
+@media (max-width: 600px) {
+  .cashier-identity .webix_template {
+    padding: 0 2px;
+  }
+  .cashier-identity-inner {
+    gap: 6px;
+  }
+  .cashier-avatar {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+  .cashier-details strong {
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cashier-details span,
+  .cashier-clock span {
+    font-size: 8px;
+  }
+  .cashier-clock {
+    padding-left: 6px;
+  }
+  .cashier-clock strong {
+    font-size: 10px;
   }
 }
