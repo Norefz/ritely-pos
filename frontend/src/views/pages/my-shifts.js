@@ -27,6 +27,7 @@ const icons = {
 
 const SCHEDULE = [
   {
+    id: "shift_1",
     icon: "sun",
     tone: "sun",
     name: "Shift 1",
@@ -34,6 +35,7 @@ const SCHEDULE = [
     length: "8 jam",
   },
   {
+    id: "shift_2",
     icon: "moon",
     tone: "moon",
     name: "Shift 2",
@@ -47,8 +49,8 @@ const salesOf = (shift) =>
     .filter((s) => s.shift_id === shift.id)
     .reduce((n, s) => n + s.total, 0);
 
-const cashierName = () =>
-  state.users.find((user) => user.username === "dina")?.name || "Dina Pratiwi";
+const cashier = () => state.users.find((user) => user.username === "dina");
+const cashierName = () => cashier()?.name || "Dina Pratiwi";
 const shiftsForMe = () =>
   state.shifts.filter((shift) => shift.cashier === cashierName());
 const myOpenShift = () =>
@@ -84,7 +86,11 @@ function statsHtml() {
     <div class="pd-stat"><i class="pd-stat-icon orange">${svg('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/>')}</i><span>Total penjualan</span><strong>${money(total)}</strong></div>`;
 }
 function scheduleHtml() {
-  return SCHEDULE.map(
+  const assignedShift = cashier()?.assigned_shift;
+  const schedule = SCHEDULE.filter((shift) => shift.id === assignedShift);
+  if (!schedule.length)
+    return '<p class="sh-note">Belum ada jadwal shift yang ditetapkan untuk saya.</p>';
+  return schedule.map(
     (s) => `<div class="sh-slot">
       <i class="sh-slot-ico ${s.tone}">${icons[s.icon]}</i>
       <div><b>${s.name}</b><span>${s.time} WIB · ${s.length}</span></div>
@@ -147,8 +153,8 @@ function historyHtml() {
         <thead><tr><th>Kasir</th><th class="sh-c-time">Dibuka (WIB)</th><th class="sh-c-closed">Ditutup (WIB)</th>
         <th class="sh-c-status">Status</th><th class="sh-c-money pd-r">Total penjualan</th></tr></thead>
         <tbody>${slice.map(rowHtml).join("")}</tbody></table></div>`
-    : `<div class="sh-empty"><i>${icons.hist}</i><b>Belum ada riwayat shift</b>
-        <p>Shift yang dibuka dan ditutup kasir akan tercatat di sini.</p></div>`;
+    : `<div class="sh-empty"><i>${icons.hist}</i><b>Belum ada riwayat shift saya</b>
+        <p>Shift yang saya buka dan tutup akan tercatat di sini.</p></div>`;
   let foot = "";
   if (pages > 1) {
     const btn = (label, inner, page, disabled, on) =>
@@ -166,7 +172,7 @@ function historyHtml() {
         ${btn("Halaman berikutnya", icons.next, view.page + 1, view.page === pages)}
       </nav></div>`;
   }
-  return `<div class="sh-hist-head"><div><h2>Riwayat shift</h2><p>Catatan pembukaan dan penutupan shift kasir.</p></div>
+  return `<div class="sh-hist-head"><div><h2>Riwayat shift saya</h2><p>Catatan pembukaan dan penutupan shift saya.</p></div>
       <em class="sh-tag">${all.length} shift</em></div>${body}${foot}`;
 }
 
