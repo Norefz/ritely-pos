@@ -492,21 +492,15 @@ small {
   padding: 0 14px !important;
   font-size: 13px !important;
   border-radius: 10px !important;
-  white-space: nowrap !important;
-  box-sizing: border-box;
 }
 .today-action .webix_button {
-  min-width: 84px;
   background: #fff !important;
-  border: 1px solid #b8c5d8 !important;
-  outline: 1px solid #d8e0ec !important;
-  outline-offset: -1px;
+  border: 1px solid #d8e0ec !important;
   color: #334155 !important;
   border-radius: 12px !important;
   font-weight: 600;
 }
 .report-action .webix_button {
-  min-width: 116px;
   background: #2453dc !important;
   border: 1px solid #2453dc !important;
   color: #fff !important;
@@ -2396,5 +2390,359 @@ small {
 @media (max-width: 640px) {
   .au-grid {
     grid-template-columns: 1fr;
+  }
+}
+/* ===== Kasir (POS) redesign (memakai komponen pd- dari halaman Produk) ===== */
+.pos-page .webix_template {
+  padding: 8px 24px 20px;
+  overflow-y: auto;
+}
+.ps-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 600px;
+}
+.ps-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.ps-top .pd-search {
+  flex: 1 1 auto;
+  max-width: none;
+}
+.ps-top .sh-btn {
+  height: 48px;
+}
+.ps-shift {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: #eef2f8;
+  color: #56657c;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ps-shift span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+.ps-shift.on {
+  background: #e5f5ec;
+  color: #17683e;
+}
+.ps-shift.on span {
+  background: #199255;
+}
+.ps-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 20px;
+}
+.ps-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+}
+.ps-chips {
+  flex: 0 0 auto;
+}
+.ps-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+  align-content: start;
+  padding: 2px 4px 8px 2px;
+}
+.ps-card[hidden],
+.ps-badge[hidden],
+.ps-none[hidden] {
+  display: none;
+}
+.ps-none {
+  padding: 40px 0;
+  text-align: center;
+  color: #718096;
+}
+.ps-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e0e7f1;
+  border-radius: 17px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.ps-card:hover {
+  border-color: #8eabeb;
+  transform: translateY(-1px);
+}
+.ps-card:focus-visible {
+  outline: 2px solid #2453dc;
+  outline-offset: 2px;
+}
+.ps-card.out {
+  opacity: 0.6;
+}
+.ps-card strong {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.ps-price {
+  font-size: 17px;
+  font-weight: 700;
+  color: #2453dc;
+}
+.ps-card .stock-tag {
+  align-self: flex-start;
+}
+.ps-art {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  height: 112px;
+  border-radius: 12px;
+  background: #dfebff;
+  color: #2250b9;
+}
+.ps-art b {
+  font:
+    700 30px Urbanist,
+    sans-serif;
+}
+.ps-art.orange {
+  background: #ffead8;
+  color: #a3471d;
+}
+.ps-art.purple {
+  background: #eee7ff;
+  color: #6945b3;
+}
+.ps-art.green {
+  background: #e4f2df;
+  color: #416f36;
+}
+/* Inisial tetap terlihat sampai gambar benar-benar selesai dimuat. */
+.ps-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  box-sizing: border-box;
+  background: #fff;
+  opacity: 0;
+}
+.ps-art img.on {
+  opacity: 1;
+}
+.ps-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border-radius: 99px;
+  background: #2453dc;
+  box-shadow: 0 0 0 3px #fff;
+  color: #fff;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 700;
+}
+.ps-cart {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+  border: 1px solid #dfe6f1;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.ps-cart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 16px 22px;
+  border-bottom: 1px solid #e8edf4;
+}
+.ps-cart-head h2 {
+  font-size: 21px;
+}
+.ps-lines {
+  flex: 1 1 auto;
+  min-height: 90px;
+  overflow-y: auto;
+  padding: 0 20px;
+}
+.ps-lines .cart-line:last-child {
+  border-bottom: 0;
+}
+.ps-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 14px 20px 20px;
+  border-top: 1px solid #e8edf4;
+}
+.ps-sum {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #f3f5f9;
+}
+.ps-sum > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  color: #69778e;
+}
+.ps-sum strong {
+  font-size: 20px;
+  color: #101828;
+}
+.ps-label {
+  margin-bottom: -4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #536177;
+}
+.ps-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ps-method {
+  height: 46px;
+  border: 1px solid #d8e0ec;
+  border-radius: 11px;
+  background: #fff;
+  color: #475569;
+  font:
+    500 14px Outfit,
+    sans-serif;
+  cursor: pointer;
+}
+.ps-method.on {
+  border: 2px solid #2453dc;
+  background: #f8faff;
+  color: #2453dc;
+  font-weight: 600;
+}
+.ps-method:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ps-cash {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 500;
+  color: #536177;
+}
+.ps-cash input {
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid #d8e0ec;
+  border-radius: 11px;
+  color: var(--navy);
+  font:
+    500 16px Outfit,
+    sans-serif;
+}
+.ps-cash input:focus {
+  outline: 2px solid #2453dc;
+  outline-offset: -1px;
+  border-color: #2453dc;
+}
+.ps-change {
+  min-height: 20px;
+  font-size: 14px;
+  color: #69778e;
+}
+.ps-change.ok {
+  color: #167445;
+}
+.ps-change.warn {
+  color: #945a00;
+}
+.ps-change strong {
+  float: right;
+}
+.ps-pay {
+  height: 56px;
+  border: 0;
+  border-radius: 12px;
+  background: #2453dc;
+  color: #fff;
+  font:
+    600 17px Outfit,
+    sans-serif;
+  cursor: pointer;
+}
+.ps-pay:hover {
+  background: #1942bd;
+}
+.ps-pay.idle {
+  background: #9db4ee;
+}
+.ps-pay:focus-visible,
+.ps-method:focus-visible {
+  outline: 2px solid #2453dc;
+  outline-offset: 2px;
+}
+@media (max-width: 1000px) {
+  .ps-wrap {
+    height: auto;
+  }
+  .ps-top {
+    flex-wrap: wrap;
+  }
+  .ps-main {
+    flex: none;
+    grid-template-columns: 1fr;
+  }
+  .ps-grid {
+    overflow: visible;
+  }
+  .ps-cart {
+    min-height: 460px;
   }
 }
