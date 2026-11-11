@@ -11,6 +11,7 @@ import { myShifts } from "./views/pages/my-shifts.js";
 import { reports } from "./views/pages/reports.js";
 import { users } from "./views/pages/users.js";
 import { audit } from "./views/pages/audit.js";
+import { login } from "./views/pages/login.js";
 let current = "dashboard";
 const factories = {
   dashboard: () => dashboard(navigate),
@@ -59,47 +60,63 @@ function changeRole(role) {
   nav.parse(menus[role].map(([id, value]) => ({ id, value })));
   navigate(menus[role][0][0]);
 }
+function mountApplication() {
+  document.getElementById("app").replaceChildren();
+  webix.ui({
+    container: "app",
+    id: "shell",
+    cols: [
+      sidebar(state.role, navigate),
+      {
+        rows: [
+          navbar(state.role, changeRole),
+          {
+            view: "template",
+            height: 42,
+            css: "demo-banner",
+            borderless: true,
+            template:
+              "Mode demo frontend · Data hanya di memori browser dan akan direset saat halaman dimuat ulang.",
+          },
+          { view: "layout", id: "contentHost", rows: [] },
+        ],
+      },
+    ],
+  });
+  navigate(
+    menus[state.role].some(([id]) => id === location.hash.slice(1))
+      ? location.hash.slice(1)
+      : "dashboard",
+  );
+  const resize = () => {
+    const shell = $$("shell");
+    shell.define("width", innerWidth);
+    shell.define("height", innerHeight);
+    shell.resize();
+  };
+  resize();
+  window.addEventListener("resize", resize);
+  window.addEventListener("hashchange", () =>
+    navigate(location.hash.slice(1)),
+  );
+}
+
+function mountLogin() {
+  document.getElementById("app").replaceChildren();
+  webix.ui({
+    container: "app",
+    id: "loginScreen",
+    rows: [
+      login((role) => {
+        state.role = role;
+        $$("loginScreen").destructor();
+        mountApplication();
+      }),
+    ],
+  });
+}
+
 if (!window.webix) {
   document.getElementById("app").innerHTML =
     '<p class="boot">Webix belum dapat dimuat. Periksa koneksi internet lalu muat ulang halaman.</p>';
-} else
-  webix.ready(() => {
-    document.getElementById("app").replaceChildren();
-    webix.ui({
-      container: "app",
-      id: "shell",
-      cols: [
-        sidebar(state.role, navigate),
-        {
-          rows: [
-            navbar(state.role, changeRole),
-            {
-              view: "template",
-              height: 42,
-              css: "demo-banner",
-              borderless: true,
-              template:
-                "Mode demo frontend · Data hanya di memori browser dan akan direset saat halaman dimuat ulang.",
-            },
-            { view: "layout", id: "contentHost", rows: [] },
-          ],
-        },
-      ],
-    });
-    navigate(
-      menus[state.role].some(([id]) => id === location.hash.slice(1))
-        ? location.hash.slice(1)
-        : "dashboard",
-    );
-    const resize = () => {
-      const shell = $$("shell");
-      shell.define("width", innerWidth);
-      shell.define("height", innerHeight);
-      shell.resize();
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    window.addEventListener("hashchange", () =>
-      navigate(location.hash.slice(1)),
-    );
-  });
+} else webix.ready(mountLogin);

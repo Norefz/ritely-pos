@@ -214,84 +214,6 @@ small {
   background: white;
   border-bottom: 1px solid var(--line);
 }
-.cashier-identity .webix_template {
-  padding: 0 8px;
-}
-.cashier-identity-inner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 48px;
-  white-space: nowrap;
-}
-.cashier-avatar {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  object-fit: cover;
-  background: #e0f2fe;
-}
-.cashier-details,
-.cashier-clock {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  gap: 2px;
-}
-.cashier-details strong,
-.cashier-clock strong {
-  color: var(--navy);
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 600;
-}
-.cashier-details span,
-.cashier-clock span {
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.2;
-}
-.cashier-clock {
-  border-left: 1px solid var(--line);
-  margin-left: 2px;
-  padding-left: 10px;
-  font-variant-numeric: tabular-nums;
-}
-.cashier-clock span {
-  font-size: 9px;
-  letter-spacing: 0.06em;
-}
-@media (max-width: 600px) {
-  .cashier-identity .webix_template {
-    padding: 0 2px;
-  }
-  .cashier-identity-inner {
-    gap: 6px;
-  }
-  .cashier-avatar {
-    width: 32px;
-    height: 32px;
-    flex-basis: 32px;
-  }
-  .cashier-details strong {
-    max-width: 70px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .cashier-details span,
-  .cashier-clock span {
-    font-size: 8px;
-  }
-  .cashier-clock {
-    padding-left: 6px;
-  }
-  .cashier-clock strong {
-    font-size: 10px;
-  }
-}
 .demo-banner .webix_template {
   background: #eff6ff;
   color: #1e40af;
@@ -2946,4 +2868,270 @@ small {
   font-size: 15px;
   line-height: 1.5;
   color: #69778e;
+}
+/* ===== Login (satu form untuk Manajer dan Admin) ===== */
+.login-page .webix_template {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0;
+  overflow: auto;
+  background: #f3f5f9;
+}
+.lg-ico {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lg-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100%;
+}
+.lg-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 48px 64px;
+  background: radial-gradient(900px 520px at 0% 0%, #17306f 0%, #0b1431 62%);
+  color: #cbd5e1;
+}
+.lg-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  font:
+    700 30px Urbanist,
+    sans-serif;
+}
+.lg-brand i {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #2563eb;
+}
+.lg-brand .lg-ico {
+  width: 23px;
+  height: 23px;
+}
+.lg-pitch h1 {
+  max-width: 460px;
+  font-size: 42px;
+  line-height: 1.18;
+  color: #fff;
+}
+.lg-pitch ul {
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+}
+.lg-pitch li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+}
+.lg-pitch li .lg-ico {
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+}
+.lg-foot {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.lg-main {
+  display: grid;
+  place-items: center;
+  padding: 40px 32px;
+}
+.lg-card {
+  width: min(440px, 100%);
+  box-sizing: border-box;
+  padding: 36px;
+  background: #fff;
+  border: 1px solid #dfe6f1;
+  border-radius: 20px;
+}
+.lg-role {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: #e8efff;
+  color: #2453c9;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.lg-card h2 {
+  margin-top: 16px;
+  font-size: 30px;
+}
+.lg-sub {
+  margin: 8px 0 24px;
+  font-size: 15px;
+  color: #69778e;
+}
+.lg-form {
+  display: grid;
+  gap: 16px;
+}
+.lg-error {
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: #fee4e1;
+  color: #b42318;
+  font-size: 14px;
+  font-weight: 500;
+}
+.lg-error[hidden] {
+  display: none;
+}
+.lg-field {
+  display: grid;
+  gap: 7px;
+}
+.lg-field > span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: #44546a;
+}
+.lg-field input {
+  width: 100%;
+  height: 50px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border: 1px solid #d8e0ec;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--navy);
+  font:
+    16px Outfit,
+    sans-serif;
+}
+.lg-field input:focus {
+  outline: 2px solid #2453dc;
+  outline-offset: -1px;
+  border-color: #2453dc;
+}
+.lg-pass {
+  position: relative;
+  display: block;
+}
+.lg-pass input {
+  padding-right: 52px;
+}
+.lg-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #526175;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.lg-eye:hover {
+  background: #f3f5f9;
+}
+.lg-eye:focus-visible,
+.lg-submit:focus-visible,
+.lg-fill:focus-visible {
+  outline: 2px solid #2453dc;
+  outline-offset: 2px;
+}
+.lg-submit {
+  height: 52px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: #2453dc;
+  color: #fff;
+  font:
+    600 16px Outfit,
+    sans-serif;
+  cursor: pointer;
+}
+.lg-submit:hover {
+  background: #1942bd;
+}
+.lg-demo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3f5f9;
+  font-size: 13px;
+  color: #56657c;
+}
+.lg-demo > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.45;
+}
+.lg-demo .lg-ico {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+.lg-demo b {
+  color: #0f172a;
+  font-weight: 600;
+}
+.lg-fill {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 1px solid #d8e0ec;
+  border-radius: 9px;
+  background: #fff;
+  color: #1d4ed8;
+  font:
+    600 13px Outfit,
+    sans-serif;
+  cursor: pointer;
+}
+@media (max-width: 900px) {
+  .lg-wrap {
+    grid-template-columns: 1fr;
+  }
+  .lg-side {
+    padding: 28px 24px;
+    gap: 20px;
+  }
+  .lg-pitch h1 {
+    font-size: 28px;
+  }
+  .lg-pitch ul,
+  .lg-foot {
+    display: none;
+  }
+  .lg-main {
+    padding: 24px 16px 40px;
+  }
+  .lg-card {
+    padding: 28px 22px;
+  }
 }
