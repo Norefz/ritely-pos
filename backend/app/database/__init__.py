@@ -1,2 +1,2 @@
-"""Koneksi, index, dan seeder database."""
+"""Database connection helpers, indexes, and seeders."""
 
