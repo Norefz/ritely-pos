@@ -20,6 +20,14 @@ class Config:
     JWT_ISSUER = os.getenv("JWT_ISSUER", "ritely-pos-api").strip()
     JWT_ACCESS_TOKEN_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_MINUTES", "480"))
     BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ALLOWED_ORIGINS",
+            "http://localhost:8080,http://127.0.0.1:8080",
+        ).split(",")
+        if origin.strip()
+    ]
     HOST = os.getenv("HOST", "127.0.0.1")
     PORT = int(os.getenv("PORT", "5000"))
     DEBUG = os.getenv("FLASK_DEBUG", "0").lower() in {"1", "true", "yes"}

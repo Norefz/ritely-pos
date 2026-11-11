@@ -1,6 +1,7 @@
 // Data simulasi frontend. Tidak tersambung ke akun, database, atau pembayaran.
 export const state = {
   role: "manager",
+  currentUser: null,
   shift: null,
   shifts: [],
   cart: [],

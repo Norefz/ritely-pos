@@ -43,7 +43,7 @@ export function navbar(role, logout) {
         width: innerWidth < 420 ? 150 : innerWidth < 600 ? 190 : 285,
         hidden: role !== "cashier",
         template: () => {
-          const cashier = state.users.find((user) => user.username === "dina");
+          const cashier = state.currentUser;
           const name = escape(cashier?.name || "Kasir");
           const id = escape(cashier?.id || "—");
           return `<div class="cashier-identity-inner">

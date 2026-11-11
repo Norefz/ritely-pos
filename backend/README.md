@@ -17,7 +17,8 @@ diabaikan Git; gunakan `.env.example` sebagai daftar variabel konfigurasi. Isi
 `JWT_SECRET_KEY` dengan secret acak (misalnya hasil
 `python -c "import secrets; print(secrets.token_hex(32))"`) dan atur
 `JWT_ACCESS_TOKEN_MINUTES` serta `BCRYPT_ROUNDS` sesuai lingkungan deployment.
-Jangan kirim token melalui koneksi HTTP di luar lingkungan development.
+`CORS_ALLOWED_ORIGINS` membatasi origin frontend (default untuk server lokal
+port 8080). Jangan kirim token melalui koneksi HTTP di luar lingkungan development.
 
 Pasang dependensi dan jalankan backend dari folder ini:
 

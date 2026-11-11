@@ -3146,6 +3146,10 @@ small {
 .lg-submit:hover {
   background: #1942bd;
 }
+.lg-submit:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
 .lg-demo {
   display: flex;
   align-items: center;

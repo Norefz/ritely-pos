@@ -1,20 +1,4 @@
-/* ---------- Halaman Login (FE demo) ----------
-   Login demo menyediakan role "manager" dan "cashier" sesuai SRS.
-   Ini hanya validasi sisi browser untuk mode demo. Saat backend tersambung,
-   ganti isi `authenticate` dengan panggilan API. */
-
-const DEMO_PASSWORD = "ritely123";
-const ACCOUNTS = {
-  manajer: { password: DEMO_PASSWORD, role: "manager" },
-  dina: { password: DEMO_PASSWORD, role: "cashier" },
-};
-
-const authenticate = (username, password) => {
-  const account = Object.hasOwn(ACCOUNTS, username)
-    ? ACCOUNTS[username]
-    : null;
-  return account?.password === password ? account : null;
-};
+import { ApiError, loginRequest } from "../../api.js";
 
 const svg = (path) =>
   `<svg class="lg-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -67,13 +51,7 @@ function shell() {
             </label>
             <button type="submit" class="lg-submit">Masuk</button>
           </form>
-          <div class="lg-demo">
-            <div>${icons.info}<span>Mode demo · username <b>manajer</b> / <b>dina</b> · kata sandi <b>${DEMO_PASSWORD}</b></span></div>
-            <div class="lg-fill-actions">
-              <button type="button" class="lg-fill" data-act="fill" data-user="manajer">Manajer</button>
-              <button type="button" class="lg-fill" data-act="fill" data-user="dina">Kasir</button>
-            </div>
-          </div>
+          <div class="lg-demo"><div>${icons.info}<span>Gunakan akun yang terdaftar untuk masuk.</span></div></div>
         </div>
       </main>
     </div>`;
@@ -103,34 +81,42 @@ function bind(root, onSuccess) {
         show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi",
       );
       el.innerHTML = show ? icons.eyeOff : icons.eye;
-    } else if (el.dataset.act === "fill") {
-      field("username").value = el.dataset.user || "manajer";
-      field("password").value = DEMO_PASSWORD;
-      showError(root, "");
-      field("password").focus();
     }
   });
   root.addEventListener("input", () => showError(root, ""));
-  root.addEventListener("submit", (e) => {
+  root.addEventListener("submit", async (e) => {
     e.preventDefault();
     const username = field("username").value.trim().toLowerCase();
     const password = field("password").value;
     if (!username || !password)
       return showError(root, "Isi username dan kata sandi.");
-    const account = authenticate(username, password);
-    if (!account) {
-      showError(root, "Username atau kata sandi salah.");
+    const submit = root.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    submit.textContent = "Memeriksa…";
+    showError(root, "");
+    try {
+      const user = await loginRequest(username, password);
+      onSuccess(user);
+    } catch (error) {
+      const message =
+        error instanceof ApiError && error.status === 401
+          ? "Username atau kata sandi salah, atau akun tidak aktif."
+          : error instanceof ApiError && error.status === 503
+            ? "Layanan login belum siap. Periksa konfigurasi backend dan database."
+            : "Tidak dapat terhubung ke server. Pastikan backend sedang berjalan.";
+      showError(root, message);
       field("password").value = "";
       field("password").focus();
-      return;
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Masuk";
     }
-    onSuccess(account.role, { username });
   });
 }
 
 /* Pemakaian:
-   webix.ui(login((role, user) => { state.role = role; ...mulai aplikasi... }));
-   `role` bernilai "manager" atau "cashier" sesuai akun demo. */
+   webix.ui(login((user) => { state.role = user.role; ...mulai aplikasi... }));
+   User berasal dari respons backend dan memiliki role "manager" atau "cashier". */
 export function login(onSuccess = () => {}) {
   return {
     view: "template",

@@ -12,6 +12,7 @@ import { reports } from "./views/pages/reports.js";
 import { users } from "./views/pages/users.js";
 import { audit } from "./views/pages/audit.js";
 import { login } from "./views/pages/login.js";
+import { logoutRequest } from "./api.js";
 let current = "dashboard";
 const factories = {
   dashboard: () => dashboard(navigate),
@@ -48,7 +49,12 @@ function navigate(id) {
   if (innerWidth < 900) $$("sidebar").hide();
 }
 function logout() {
-  const finishLogout = () => {
+  const finishLogout = async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      // Hapus token lokal juga jika backend sementara tidak dapat dijangkau.
+    }
     history.replaceState(null, "", location.pathname);
     window.location.reload();
   };
@@ -77,7 +83,7 @@ function mountApplication() {
             css: "demo-banner",
             borderless: true,
             template:
-              "Mode demo frontend · Data hanya di memori browser dan akan direset saat halaman dimuat ulang.",
+              "Login terhubung ke backend · Data operasional masih berupa demo frontend.",
           },
           { view: "layout", id: "contentHost", rows: [] },
         ],
@@ -108,8 +114,9 @@ function mountLogin() {
     container: "app",
     id: "loginScreen",
     rows: [
-      login((role) => {
-        state.role = role;
+      login((user) => {
+        state.currentUser = user;
+        state.role = user.role;
         $$("loginScreen").destructor();
         mountApplication();
       }),
