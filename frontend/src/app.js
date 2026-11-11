@@ -49,6 +49,11 @@ function navigate(id) {
 function changeRole(role) {
   state.role = role;
   $$("sidebarProfile").refresh();
+  const cashierIdentity = $$("cashierIdentity");
+  if (cashierIdentity) {
+    if (role === "cashier") cashierIdentity.show();
+    else cashierIdentity.hide();
+  }
   const nav = $$("navigation");
   nav.clearAll();
   nav.parse(menus[role].map(([id, value]) => ({ id, value })));
