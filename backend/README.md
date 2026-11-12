@@ -7,7 +7,7 @@ Backend Flask dengan pemisahan MVC dan Service Layer.
 - `app/models`: representasi dan validasi bentuk data aplikasi.
 - `app/integrations`: adapter layanan eksternal, termasuk Midtrans.
 - `app/middleware`: autentikasi, otorisasi, dan penanganan error lintas endpoint.
-- `app/config`: konfigurasi aplikasi berdasarkan environment.
+- `app/config.py`: konfigurasi aplikasi berdasarkan environment.
 - `app/database`: koneksi MongoDB, index, dan seeder CLI.
 
 ## MongoDB

@@ -1,2 +1,0 @@
-"""Adapter untuk layanan eksternal."""
-

@@ -1,2 +1,0 @@
-"""Representasi model/dokumen aplikasi."""
-
