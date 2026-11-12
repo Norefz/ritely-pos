@@ -1,5 +1,6 @@
-import { state, uid, categoryName, escape } from "../../demo.js";
+import { state, categoryName, escape } from "../../demo.js";
 import { editor } from "./common.js";
+import { ApiError, adjustStockRequest } from "../../api.js";
 
 /* ---------- Halaman Persediaan: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -66,16 +67,15 @@ function pageItems(cur, total) {
 
 /* ---------- Potongan HTML ---------- */
 function pillHtml() {
-  return `<span class="pd-pill"><span class="pd-pill-dot"></span>Sesi demo · ${state.movements.length} penyesuaian</span>`;
+  return `<span class="pd-pill"><span class="pd-pill-dot"></span>Stok tersimpan di database</span>`;
 }
 function statsHtml() {
   const low = state.products.filter(lowStock);
   const units = state.products.reduce((sum, p) => sum + (+p.stock || 0), 0);
-  const moves = state.movements.length;
   return `
     <div class="pd-stat"><i class="pd-stat-icon blue">${svg('<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>')}</i><span>Total unit stok</span><strong>${units}</strong></div>
     <div class="pd-stat warn"><i class="pd-stat-icon amber">${svg('<path d="M12 3 2.8 20h18.4L12 3zM12 9v5M12 17h.01"/>')}</i><span>Stok menipis</span><strong>${low.length}</strong></div>
-    <div class="pd-stat"><i class="pd-stat-icon green">${svg('<path d="M4 7h16M4 12h16M4 17h10"/><path d="m16 16 2 2 4-4"/>')}</i><span>Penyesuaian sesi ini</span><strong>${moves}</strong></div>`;
+    <div class="pd-stat"><i class="pd-stat-icon green">${svg('<path d="M4 7h16M4 12h16M4 17h10"/><path d="m16 16 2 2 4-4"/>')}</i><span>Produk tercatat</span><strong>${state.products.length}</strong></div>`;
 }
 function chipsHtml() {
   const low = state.products.filter(lowStock).length;
@@ -222,7 +222,7 @@ export function stock(refresh) {
         },
       ],
       p,
-      (v) => {
+      async (v) => {
         if (
           !Number.isInteger(+v.stock) ||
           +v.stock < 0 ||
@@ -234,14 +234,20 @@ export function stock(refresh) {
           });
           return false;
         }
-        state.movements.push({
-          id: uid(),
-          name: p.name,
-          quantity: +v.stock - p.stock,
-          reason: v.reason,
-        });
-        p.stock = +v.stock;
-        refresh();
+        try {
+          const result = await adjustStockRequest(p.id, +v.stock, v.reason.trim());
+          p.stock = result.product.stock;
+          refresh();
+          webix.message("Penyesuaian stok tersimpan dan tercatat di database.");
+        } catch (error) {
+          const message = error instanceof ApiError && error.code === "stock_changed_retry"
+            ? "Stok berubah dari sesi lain. Muat ulang lalu coba lagi."
+            : error instanceof ApiError && error.code === "database_unavailable"
+              ? "Database belum dapat dijangkau."
+              : "Penyesuaian stok gagal disimpan.";
+          webix.message({ type: "error", text: message });
+          return false;
+        }
       },
     );
   }

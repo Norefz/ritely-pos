@@ -1,5 +1,11 @@
-import { state, money, categoryName, uid, escape } from "../../demo.js";
+import { state, money, categoryName, escape } from "../../demo.js";
 import { heading, table, button, editor } from "./common.js";
+import {
+  ApiError,
+  createCategoryRequest,
+  createProductRequest,
+  updateProductRequest,
+} from "../../api.js";
 
 /* ---------- Halaman Produk: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -210,8 +216,17 @@ function bind(root, edit) {
 
 export function products(refresh) {
   function edit(
-    product = { active: true, stock: 0, minimum: 5, category: "c1" },
+    product = {
+      active: true,
+      stock: 0,
+      minimum: 5,
+      category: state.categories.find((category) => category.active !== false)?.id,
+    },
   ) {
+    if (!state.categories.some((category) => category.active !== false)) {
+      webix.message({ type: "error", text: "Buat kategori aktif terlebih dahulu." });
+      return;
+    }
     editor(
       product.id ? "Ubah produk" : "Tambah produk",
       [
@@ -221,7 +236,9 @@ export function products(refresh) {
           view: "richselect",
           name: "category",
           label: "Kategori",
-          options: state.categories.map((c) => ({ id: c.id, value: c.name })),
+          options: state.categories
+            .filter((category) => category.active !== false)
+            .map((category) => ({ id: category.id, value: category.name })),
           required: true,
         },
         {
@@ -246,7 +263,7 @@ export function products(refresh) {
         },
       ],
       product,
-      (v) => {
+      async (v) => {
         if (
           !v.name.trim() ||
           !v.sku.trim() ||
@@ -267,18 +284,47 @@ export function products(refresh) {
           webix.message({ type: "error", text: "SKU sudah dipakai." });
           return false;
         }
-        const value = {
-          ...product,
-          ...v,
-          id: product.id || uid(),
-          price: +v.price,
-          minimum: +v.minimum,
-          stock: product.stock || 0,
-          active: !!+v.active,
+        const payload = {
+          name: v.name.trim(),
+          sku: v.sku.trim(),
+          category_id: v.category,
+          selling_price: +v.price,
+          minimum_stock: +v.minimum,
+          is_active: !!+v.active,
         };
-        if (product.id) Object.assign(product, value);
-        else state.products.push(value);
-        refresh();
+        try {
+          const result = product.id
+            ? await updateProductRequest(product.id, payload)
+            : await createProductRequest(payload);
+          const saved = result.product;
+          const value = {
+            id: saved.id,
+            sku: saved.sku,
+            name: saved.name,
+            category: saved.category_id,
+            price: Number(saved.selling_price),
+            stock: saved.stock,
+            minimum: saved.minimum_stock,
+            active: saved.is_active,
+          };
+          if (product.id)
+            state.products = state.products.map((item) =>
+              item.id === product.id ? value : item,
+            );
+          else state.products.push(value);
+          refresh();
+          webix.message(product.id ? "Produk diperbarui." : "Produk ditambahkan.");
+        } catch (error) {
+          const message = error instanceof ApiError && error.code === "sku_taken"
+            ? "SKU sudah dipakai."
+            : error instanceof ApiError && error.code === "inactive_category"
+              ? error.message
+              : error instanceof ApiError && error.code === "database_unavailable"
+                ? "Database belum dapat dijangkau."
+                : "Produk gagal disimpan. Periksa koneksi backend dan datanya.";
+          webix.message({ type: "error", text: message });
+          return false;
+        }
       },
     );
   }
@@ -320,13 +366,13 @@ export function categories(refresh) {
                   },
                 ],
                 {},
-                (v) => {
+              async (v) => {
                   const name = v.name.trim();
                   if (
-                    !name ||
-                    state.categories.some(
-                      (c) => c.name.toLowerCase() === name.toLowerCase(),
-                    )
+                  !name ||
+                  state.categories.some(
+                    (c) => c.name.toLowerCase() === name.toLowerCase(),
+                  )
                   ) {
                     webix.message({
                       type: "error",
@@ -334,8 +380,18 @@ export function categories(refresh) {
                     });
                     return false;
                   }
-                  state.categories.push({ id: uid(), name });
+                try {
+                  const result = await createCategoryRequest({ name });
+                  state.categories.push({ ...result.category, active: true });
                   refresh();
+                  webix.message("Kategori ditambahkan.");
+                } catch (error) {
+                  const message = error instanceof ApiError && error.code === "category_name_taken"
+                    ? "Nama kategori sudah digunakan."
+                    : "Kategori gagal disimpan. Periksa koneksi backend.";
+                  webix.message({ type: "error", text: message });
+                  return false;
+                }
                 },
               ),
             true,

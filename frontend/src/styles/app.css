@@ -2624,6 +2624,45 @@ small {
 .ps-shift.on span {
   background: #199255;
 }
+
+.so-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  color: #1d4ed8;
+}
+.so-intro > .pd-ico {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+.so-intro b {
+  color: #15213b;
+}
+.so-intro p {
+  margin: 4px 0 0;
+  color: #60708d;
+  font-size: 13px;
+}
+.so-product b,
+.so-product small,
+.so-note {
+  display: block;
+}
+.so-product small,
+.so-note {
+  margin-top: 4px;
+  color: #71809a;
+  font-size: 12px;
+}
+.so-difference.positive {
+  color: #087647;
+}
+.so-difference.negative {
+  color: #bd3c30;
+}
 .ps-main {
   flex: 1;
   min-height: 0;

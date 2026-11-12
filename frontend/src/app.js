@@ -4,6 +4,7 @@ import { navbar } from "./views/layout/navbar.js";
 import { dashboard } from "./views/pages/dashboard.js";
 import { products, categories } from "./views/pages/product.js";
 import { stock } from "./views/pages/stock.js";
+import { stockOpnames } from "./views/pages/stock-opnames.js";
 import { pos } from "./views/pages/pos.js";
 import { transactions } from "./views/pages/transactions.js";
 import { shifts } from "./views/pages/shifts.js";
@@ -19,6 +20,8 @@ import {
   hasAccessToken,
   logoutRequest,
   shiftsRequest,
+  catalogRequest,
+  stockOpnamesRequest,
 } from "./api.js";
 let current = "dashboard";
 let shiftSyncTimer = null;
@@ -28,6 +31,7 @@ const factories = {
   products: () => products(refresh),
   categories: () => categories(refresh),
   stock: () => stock(refresh),
+  "stock-opnames": () => stockOpnames(refresh),
   pos: () => pos(refresh),
   transactions,
   shifts: () =>
@@ -91,9 +95,9 @@ function mountApplication() {
             height: 42,
             css: "demo-banner",
             borderless: true,
-            template: state.shiftLoadError
-              ? "Shift gagal dimuat dari backend · Periksa koneksi, lalu muat ulang halaman."
-              : "Login dan shift terhubung ke backend · Data produk, stok, dan transaksi masih demo.",
+            template: state.catalogLoadError
+              ? "Katalog gagal dimuat dari backend · Periksa koneksi, lalu muat ulang halaman."
+              : "Katalog, shift, dan stock opname terhubung ke backend · Transaksi POS masih simulasi.",
           },
           { view: "layout", id: "contentHost", rows: [] },
         ],
@@ -130,6 +134,8 @@ function mountLogin() {
         state.currentUser = user;
         state.role = user.role;
         await hydrateShifts();
+        await hydrateCatalog();
+        await hydrateStockOpnames();
         $$("loginScreen").destructor();
         mountApplication();
       }),
@@ -148,13 +154,69 @@ async function hydrateShifts() {
   }
 }
 
+async function hydrateCatalog() {
+  try {
+    const catalog = await catalogRequest();
+    state.categories = catalog.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      active: category.is_active,
+    }));
+    state.products = catalog.products.map((product) => ({
+      id: product.id,
+      sku: product.sku,
+      name: product.name,
+      category: product.category_id,
+      price: Number(product.selling_price),
+      stock: product.stock,
+      minimum: product.minimum_stock,
+      active: product.is_active,
+    }));
+    state.catalogLoadError = false;
+  } catch {
+    state.categories = [];
+    state.products = [];
+    state.catalogLoadError = true;
+  }
+}
+
+async function hydrateStockOpnames() {
+  try {
+    const result = await stockOpnamesRequest();
+    state.stockOpnames = result.opnames || [];
+    state.stockOpnameLoadError = false;
+  } catch {
+    state.stockOpnames = [];
+    state.stockOpnameLoadError = true;
+  }
+}
+
 async function syncShiftSnapshot() {
   if (syncingShifts || !hasAccessToken()) return;
   syncingShifts = true;
-  const previous = JSON.stringify([state.shift, state.shifts, state.shiftLoadError]);
+  const previous = JSON.stringify([
+    state.shift,
+    state.shifts,
+    state.shiftLoadError,
+    state.products,
+    state.categories,
+    state.stockOpnames,
+    state.catalogLoadError,
+    state.stockOpnameLoadError,
+  ]);
   try {
     await hydrateShifts();
-    const currentSnapshot = JSON.stringify([state.shift, state.shifts, state.shiftLoadError]);
+    await Promise.all([hydrateCatalog(), hydrateStockOpnames()]);
+    const currentSnapshot = JSON.stringify([
+      state.shift,
+      state.shifts,
+      state.shiftLoadError,
+      state.products,
+      state.categories,
+      state.stockOpnames,
+      state.catalogLoadError,
+      state.stockOpnameLoadError,
+    ]);
     if (previous !== currentSnapshot && $$("contentHost")) refresh();
   } finally {
     syncingShifts = false;
@@ -196,6 +258,7 @@ async function initializeApp() {
     state.currentUser = user;
     state.role = user.role;
     await hydrateShifts();
+    await Promise.all([hydrateCatalog(), hydrateStockOpnames()]);
     mountApplication();
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {

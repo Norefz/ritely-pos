@@ -27,8 +27,8 @@ function storeToken(token) {
 let accessToken = readStoredToken();
 
 export class ApiError extends Error {
-  constructor(status, code) {
-    super(code || `Permintaan gagal (${status}).`);
+  constructor(status, code, message) {
+    super(message || code || `Permintaan gagal (${status}).`);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
@@ -53,7 +53,8 @@ export async function apiRequest(path, options = {}) {
   }
 
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(response.status, payload.error);
+  if (!response.ok)
+    throw new ApiError(response.status, payload.error, payload.message);
   return payload;
 }
 
@@ -83,6 +84,56 @@ export async function closeShiftRequest(shiftId, reason = "") {
   return apiRequest(`/api/shifts/${encodeURIComponent(shiftId)}/close`, {
     method: "POST",
     body: JSON.stringify({ reason }),
+  });
+}
+
+export async function catalogRequest() {
+  return apiRequest("/api/catalog");
+}
+
+export async function createProductRequest(product) {
+  return apiRequest("/api/products", {
+    method: "POST",
+    body: JSON.stringify(product),
+  });
+}
+
+export async function updateProductRequest(productId, changes) {
+  return apiRequest(`/api/products/${encodeURIComponent(productId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+}
+
+export async function createCategoryRequest(category) {
+  return apiRequest("/api/categories", {
+    method: "POST",
+    body: JSON.stringify(category),
+  });
+}
+
+export async function updateCategoryRequest(categoryId, changes) {
+  return apiRequest(`/api/categories/${encodeURIComponent(categoryId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+}
+
+export async function adjustStockRequest(productId, stock, reason) {
+  return apiRequest(
+    `/api/products/${encodeURIComponent(productId)}/stock-adjustments`,
+    { method: "POST", body: JSON.stringify({ stock, reason }) },
+  );
+}
+
+export async function stockOpnamesRequest() {
+  return apiRequest("/api/stock-opnames");
+}
+
+export async function submitStockOpnameRequest(data) {
+  return apiRequest("/api/stock-opnames", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 

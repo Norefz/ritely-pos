@@ -49,11 +49,34 @@ export function editor(title, elements, values, save) {
           cols: [
             button("Batal", () => win.close()),
             button(
-              "Simpan demo",
-              () => {
+              "Simpan",
+              function () {
                 const form = $$("editorForm");
-                if (form.validate() && save(form.getValues()) !== false)
-                  win.close();
+                if (!form.validate()) return;
+                const result = save(form.getValues());
+                if (result && typeof result.then === "function") {
+                  const saveButton = this;
+                  saveButton.disable();
+                  saveButton.setValue("Menyimpan…");
+                  result
+                    .then((saved) => {
+                      if (saved !== false) win.close();
+                    })
+                    .catch(() => {
+                      webix.message({
+                        type: "error",
+                        text: "Perubahan gagal disimpan. Periksa koneksi backend.",
+                      });
+                    })
+                    .finally(() => {
+                      if (!win.$destructed) {
+                        saveButton.enable();
+                        saveButton.setValue("Simpan");
+                      }
+                    });
+                  return;
+                }
+                if (result !== false) win.close();
               },
               true,
             ),

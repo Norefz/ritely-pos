@@ -4,6 +4,7 @@ export const state = {
   currentUser: null,
   shift: null,
   shifts: [],
+  stockOpnames: [],
   cart: [],
   sales: [],
   movements: [],

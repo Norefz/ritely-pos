@@ -7,6 +7,7 @@ from flask_cors import CORS
 
 from app.config import Config
 from app.controllers.auth import auth_bp
+from app.controllers.catalog import catalog_bp
 from app.controllers.health import health_bp
 from app.controllers.shifts import shifts_bp
 from app.controllers.users import users_bp
@@ -31,6 +32,7 @@ def create_app(config_object=Config):
     )
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(catalog_bp)
     app.register_blueprint(shifts_bp)
     app.register_blueprint(users_bp)
 
