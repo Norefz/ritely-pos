@@ -12,7 +12,13 @@ import { reports } from "./views/pages/reports.js";
 import { users } from "./views/pages/users.js";
 import { audit } from "./views/pages/audit.js";
 import { login } from "./views/pages/login.js";
-import { logoutRequest } from "./api.js";
+import {
+  ApiError,
+  clearAccessToken,
+  currentUserRequest,
+  hasAccessToken,
+  logoutRequest,
+} from "./api.js";
 let current = "dashboard";
 const factories = {
   dashboard: () => dashboard(navigate),
@@ -124,7 +130,54 @@ function mountLogin() {
   });
 }
 
+function mountSessionRecovery(error) {
+  const message =
+    error instanceof ApiError && error.status === 0
+      ? "Backend belum dapat dijangkau. Sesi tetap disimpan; coba lagi setelah backend berjalan."
+      : "Sesi belum dapat diverifikasi. Periksa koneksi backend dan database, lalu coba lagi.";
+  const root = document.getElementById("app");
+  root.innerHTML = `
+    <main class="session-recovery" role="alert">
+      <section class="session-recovery-card">
+        <h1>Memulihkan sesi</h1>
+        <p>${message}</p>
+        <div class="session-recovery-actions">
+          <button type="button" data-act="retry">Coba lagi</button>
+          <button type="button" data-act="login">Keluar dan masuk lagi</button>
+        </div>
+      </section>
+    </main>`;
+  root.querySelector('[data-act="retry"]').addEventListener("click", initializeApp);
+  root.querySelector('[data-act="login"]').addEventListener("click", () => {
+    clearAccessToken();
+    state.currentUser = null;
+    state.role = "manager";
+    mountLogin();
+  });
+}
+
+async function initializeApp() {
+  if (!hasAccessToken()) return mountLogin();
+  document.getElementById("app").innerHTML =
+    '<p class="boot" role="status">Memulihkan sesi…</p>';
+  try {
+    const user = await currentUserRequest();
+    state.currentUser = user;
+    state.role = user.role;
+    mountApplication();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearAccessToken();
+      state.currentUser = null;
+      state.role = "manager";
+      mountLogin();
+      return;
+    }
+    mountSessionRecovery(error);
+  }
+}
+
 if (!window.webix) {
   document.getElementById("app").innerHTML =
     '<p class="boot">Webix belum dapat dimuat. Periksa koneksi internet lalu muat ulang halaman.</p>';
-} else webix.ready(mountLogin);
+} else webix.ready(initializeApp);

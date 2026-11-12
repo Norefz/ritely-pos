@@ -50,6 +50,53 @@ small {
 .boot {
   padding: 40px;
 }
+.session-recovery {
+  display: grid;
+  min-height: 100%;
+  box-sizing: border-box;
+  place-items: center;
+  padding: 24px;
+  background: #f1f5f9;
+}
+.session-recovery-card {
+  width: min(440px, 100%);
+  box-sizing: border-box;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.session-recovery-card h1 {
+  font-size: 22px;
+}
+.session-recovery-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+.session-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.session-recovery-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--blue);
+  cursor: pointer;
+}
+.session-recovery-actions button:first-child {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.session-recovery-actions button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
 .webix_layout_space {
   background: var(--ground);
 }

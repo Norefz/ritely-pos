@@ -5,7 +5,26 @@ const API_BASE_URL = (
   window.RITELY_API_BASE_URL || defaultApiBaseUrl
 ).replace(/\/$/, "");
 
-let accessToken = null;
+const TOKEN_STORAGE_KEY = "ritely_access_token";
+
+function readStoredToken() {
+  try {
+    return window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeToken(token) {
+  accessToken = token;
+  try {
+    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } catch {
+    // Keep the in-memory session when browser storage is unavailable.
+  }
+}
+
+let accessToken = readStoredToken();
 
 export class ApiError extends Error {
   constructor(status, code) {
@@ -43,8 +62,17 @@ export async function loginRequest(username, password) {
     method: "POST",
     body: JSON.stringify({ username, password }),
   });
-  accessToken = result.access_token;
+  storeToken(result.access_token);
   return result.user;
+}
+
+export async function currentUserRequest() {
+  const result = await apiRequest("/api/auth/me");
+  return result.user;
+}
+
+export function hasAccessToken() {
+  return Boolean(accessToken);
 }
 
 export async function logoutRequest() {
@@ -53,10 +81,15 @@ export async function logoutRequest() {
       await apiRequest("/api/auth/logout", { method: "POST" });
     }
   } finally {
-    accessToken = null;
+    clearAccessToken();
   }
 }
 
 export function clearAccessToken() {
   accessToken = null;
+  try {
+    window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    // The in-memory token is cleared even when browser storage is unavailable.
+  }
 }
