@@ -1,4 +1,5 @@
 import { state, escape } from "../../demo.js";
+import { cashierAvatarSrc } from "../cashier-avatar.js";
 
 const jakartaTime = () =>
   new Intl.DateTimeFormat("id-ID", {
@@ -46,8 +47,9 @@ export function navbar(role, logout) {
           const cashier = state.currentUser;
           const name = escape(cashier?.name || "Kasir");
           const id = escape(cashier?.employee_id || "Belum ada");
+          const avatar = cashierAvatarSrc(cashier);
           return `<div class="cashier-identity-inner">
-            <img class="cashier-avatar" src="./assets/images/cashier-dina.svg" alt="Foto profil ${name}">
+            <img class="cashier-avatar" src="${avatar}" alt="Foto profil ${name}">
             <div class="cashier-details"><strong>${name}</strong><span>ID karyawan · ${id}</span></div>
             <div class="cashier-clock"><span>WAKTU</span><strong data-cashier-clock>${jakartaTime()}</strong></div>
           </div>`;

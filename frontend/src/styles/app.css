@@ -2266,6 +2266,9 @@ small {
 .us-c-user {
   width: 170px;
 }
+.us-c-id {
+  width: 150px;
+}
 .us-c-slot {
   width: 290px;
 }
@@ -2276,7 +2279,66 @@ small {
   width: 130px;
 }
 .us-table {
-  min-width: 820px;
+  min-width: 960px;
+}
+.us-id {
+  color: #2453c9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.us-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.webix_el_richselect .webix_input_icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+}
+.webix_el_richselect .webix_input_icon::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.webix_el_checkbox .webix_custom_checkbox {
+  width: 18px;
+  height: 18px;
+  margin: 2px 6px 0 0;
+  box-sizing: border-box;
+  border: 1px solid #aebbd0;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0;
+  color: #fff;
+}
+.webix_el_checkbox .webix_custom_checkbox::before {
+  content: "";
+  display: none;
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 4px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.webix_el_checkbox .webix_checkbox_1 .webix_custom_checkbox {
+  border-color: #2453c9;
+  background: #2453c9;
+}
+.webix_el_checkbox .webix_checkbox_1 .webix_custom_checkbox::before {
+  display: block;
 }
 .us-who b {
   display: block;

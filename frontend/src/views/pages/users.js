@@ -1,11 +1,17 @@
-import { state, uid, escape } from "../../demo.js";
-import { editor } from "./common.js";
+import { escape } from "../../demo.js";
+import { ApiError, apiRequest } from "../../api.js";
+import { cashierAvatarSrc } from "../cashier-avatar.js";
 
-/* ---------- Halaman Akun kasir: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
-// Filter bertahan selama sesi, termasuk saat refresh() membangun ulang halaman.
 const view = { q: "", status: "all", page: 1 };
-const TONES = ["", "orange", "purple", "green"]; // warna avatar bergantian per akun
+const SHIFTS = {
+  shift_1: { name: "Shift 1", time: "07.00–15.00", icon: "sun", tone: "a" },
+  shift_2: { name: "Shift 2", time: "15.00–22.00", icon: "moon", tone: "b" },
+};
+
+let cashierUsers = [];
+let loadState = "loading";
+let loadError = "";
 
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -26,129 +32,127 @@ const icons = {
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
 };
 
-const SHIFTS = {
-  shift_1: { name: "Shift 1", time: "07.00–15.00", icon: "sun", tone: "a" },
-  shift_2: { name: "Shift 2", time: "15.00–22.00", icon: "moon", tone: "b" },
-};
-
-function initials(name) {
-  const w = name.trim().split(/\s+/);
-  return (
-    w.length > 1 ? w[0][0] + w[1][0] : name.trim().slice(0, 2)
-  ).toUpperCase();
-}
-function tone(user) {
-  const i = state.users.indexOf(user);
-  return TONES[(i < 0 ? 0 : i) % TONES.length];
-}
 function filtered() {
-  const q = view.q.trim().toLowerCase();
-  return state.users.filter(
-    (u) =>
+  const query = view.q.trim().toLowerCase();
+  return cashierUsers.filter(
+    (user) =>
       (view.status === "all" ||
-        (view.status === "active" ? u.active : !u.active)) &&
-      (!q || (u.name + " " + u.username).toLowerCase().includes(q)),
+        (view.status === "active" ? user.is_active : !user.is_active)) &&
+      (!query ||
+        `${user.name} ${user.username} ${user.employee_id}`
+          .toLowerCase()
+          .includes(query)),
   );
-}
-function pageItems(cur, total) {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const set = new Set([1, total, cur - 1, cur, cur + 1]);
-  if (cur <= 3) [2, 3, 4].forEach((n) => set.add(n));
-  if (cur >= total - 2)
-    [total - 3, total - 2, total - 1].forEach((n) => set.add(n));
-  const nums = [...set]
-    .filter((n) => n >= 1 && n <= total)
-    .sort((a, b) => a - b);
-  const out = [];
-  nums.forEach((n, i) => {
-    if (i && n - nums[i - 1] > 1) out.push("…");
-    out.push(n);
-  });
-  return out;
 }
 
-/* ---------- Potongan HTML ---------- */
+function pageItems(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  if (current <= 3) [2, 3, 4].forEach((page) => pages.add(page));
+  if (current >= total - 2)
+    [total - 3, total - 2, total - 1].forEach((page) => pages.add(page));
+  const numbers = [...pages]
+    .filter((page) => page >= 1 && page <= total)
+    .sort((a, b) => a - b);
+  const result = [];
+  numbers.forEach((page, index) => {
+    if (index && page - numbers[index - 1] > 1) result.push("…");
+    result.push(page);
+  });
+  return result;
+}
+
 function statsHtml() {
-  const active = state.users.filter((u) => u.active);
+  const active = cashierUsers.filter((user) => user.is_active);
   const keys = Object.keys(SHIFTS);
-  const covered = keys.filter((k) =>
-    active.some((u) => u.assigned_shift === k),
+  const covered = keys.filter((key) =>
+    active.some((user) => user.assigned_shift === key),
   );
-  const missing = keys.filter((k) => !covered.includes(k));
+  const missing = keys.filter((key) => !covered.includes(key));
   return `
-    <div class="pd-stat"><span>Total kasir</span><strong>${state.users.length}</strong></div>
+    <div class="pd-stat"><span>Total kasir</span><strong>${cashierUsers.length}</strong></div>
     <div class="pd-stat"><span>Aktif</span><strong>${active.length}</strong></div>
     <div class="pd-stat${missing.length ? " warn" : ""}"><span>Shift terisi</span><strong>${covered.length}/${keys.length}</strong></div>`;
 }
+
 function chipsHtml() {
-  const active = state.users.filter((u) => u.active).length;
+  const active = cashierUsers.filter((user) => user.is_active).length;
   const chip = (value, label, count) =>
     `<button type="button" class="pd-chip${view.status === value ? " on" : ""}" data-act="status" data-value="${value}" aria-pressed="${view.status === value}">${label} <i>${count}</i></button>`;
   return (
-    chip("all", "Semua", state.users.length) +
+    chip("all", "Semua", cashierUsers.length) +
     chip("active", "Aktif", active) +
-    chip("inactive", "Nonaktif", state.users.length - active)
+    chip("inactive", "Nonaktif", cashierUsers.length - active)
   );
 }
+
 function slotHtml(key) {
-  const s = SHIFTS[key];
-  return s
-    ? `<span class="us-slot ${s.tone}">${icons[s.icon]}${s.name} · ${s.time} WIB</span>`
+  const shift = SHIFTS[key];
+  return shift
+    ? `<span class="us-slot ${shift.tone}">${icons[shift.icon]}${shift.name} · ${shift.time} WIB</span>`
     : '<span class="us-none">Belum ditugaskan</span>';
 }
-function rowHtml(u) {
+
+function rowHtml(user) {
   return `<tr>
-    <td><div class="pd-name"><i class="pd-av ${tone(u)}">${escape(initials(u.name))}</i>
-      <div class="us-who"><b>${escape(u.name)}</b><small>Kasir</small></div></div></td>
-    <td class="us-handle">@${escape(u.username)}</td>
-    <td>${slotHtml(u.assigned_shift)}</td>
-    <td><span class="pd-status ${u.active ? "on" : "off"}">${u.active ? "Aktif" : "Nonaktif"}</span></td>
-    <td class="pd-act"><button type="button" class="pd-edit" data-act="edit" data-id="${escape(String(u.id))}" aria-label="Ubah ${escape(u.name)}">${icons.pencil}Ubah</button></td>
+    <td><div class="pd-name"><img class="us-avatar" src="${cashierAvatarSrc(user)}" alt="" aria-hidden="true" loading="lazy">
+      <div class="us-who"><b>${escape(user.name)}</b><small>Kasir</small></div></div></td>
+    <td><span class="us-id">${escape(user.employee_id || "Belum ada")}</span></td>
+    <td class="us-handle">@${escape(user.username)}</td>
+    <td>${slotHtml(user.assigned_shift)}</td>
+    <td><span class="pd-status ${user.is_active ? "on" : "off"}">${user.is_active ? "Aktif" : "Nonaktif"}</span></td>
+    <td class="pd-act"><button type="button" class="pd-edit" data-act="edit" data-id="${escape(String(user.id))}" aria-label="Ubah ${escape(user.name)}">${icons.pencil}Ubah</button></td>
   </tr>`;
 }
+
 function listHtml(rows) {
+  if (loadState === "loading")
+    return '<tr><td colspan="6" class="pd-empty" role="status">Memuat akun kasir…</td></tr>';
+  if (loadState === "error")
+    return `<tr><td colspan="6" class="pd-empty">${escape(loadError || "Daftar kasir gagal dimuat.")} <button type="button" class="pd-edit" data-act="retry">Coba lagi</button></td></tr>`;
   return rows.length
     ? rows.map(rowHtml).join("")
-    : `<tr><td colspan="5" class="pd-empty">Tidak ada akun yang cocok dengan pencarian atau filter ini.</td></tr>`;
+    : `<tr><td colspan="6" class="pd-empty">${cashierUsers.length ? "Tidak ada akun yang cocok dengan pencarian atau filter ini." : "Belum ada akun kasir."}</td></tr>`;
 }
+
 function footHtml(total, pages, from, to) {
   const text = total
     ? `Menampilkan ${from}–${to} dari ${total} akun`
     : "Menampilkan 0 akun";
   if (pages < 2) return `<span>${text}</span>`;
-  const btn = (label, inner, page, disabled, on) =>
-    `<button type="button" class="pd-pg${on ? " on" : ""}" data-act="page" data-page="${page}" aria-label="${label}"${on ? ' aria-current="page"' : ""}${disabled ? " disabled" : ""}>${inner}</button>`;
-  const nums = pageItems(view.page, pages)
-    .map((n) =>
-      n === "…"
+  const button = (label, inner, page, disabled, current) =>
+    `<button type="button" class="pd-pg${current ? " on" : ""}" data-act="page" data-page="${page}" aria-label="${label}"${current ? ' aria-current="page"' : ""}${disabled ? " disabled" : ""}>${inner}</button>`;
+  const numbers = pageItems(view.page, pages)
+    .map((page) =>
+      page === "…"
         ? '<span class="pd-gap">…</span>'
-        : btn(`Halaman ${n}`, n, n, false, n === view.page),
+        : button(`Halaman ${page}`, page, page, false, page === view.page),
     )
     .join("");
   return `<span>${text}</span>
     <nav class="pd-pager" aria-label="Halaman akun kasir">
-      ${btn("Halaman sebelumnya", icons.prev, view.page - 1, view.page === 1)}
-      ${nums}
-      ${btn("Halaman berikutnya", icons.next, view.page + 1, view.page === pages)}
+      ${button("Halaman sebelumnya", icons.prev, view.page - 1, view.page === 1, false)}
+      ${numbers}
+      ${button("Halaman berikutnya", icons.next, view.page + 1, view.page === pages, false)}
     </nav>`;
 }
 
 function shell() {
   return `
     <div class="pd-head">
-      <div><h1>Akun kasir</h1><p>Data profil contoh. Tidak membuat akun login atau menyimpan password.</p></div>
-      <button type="button" class="pd-add" data-act="add">${icons.plus}Tambah akun demo</button>
+      <div><h1>Akun kasir</h1><p>Kelola akun, ID karyawan, dan penugasan shift.</p></div>
+      <button type="button" class="pd-add" data-act="add">${icons.plus}Tambah kasir</button>
     </div>
     <section class="pd-card pd-stats" data-part="stats">${statsHtml()}</section>
     <section class="pd-card pd-filters">
-      <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nama atau username" value="${escape(view.q)}" aria-label="Cari akun kasir" autocomplete="off" /></label>
+      <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nama, username, atau ID karyawan" value="${escape(view.q)}" aria-label="Cari akun kasir" autocomplete="off" /></label>
       <div class="pd-chips" data-part="chips" role="group" aria-label="Filter status akun">${chipsHtml()}</div>
     </section>
     <section class="pd-card">
       <div class="pd-scroll">
         <table class="pd-table us-table">
           <thead><tr>
-            <th>Nama kasir</th><th class="us-c-user">Username</th><th class="us-c-slot">Penugasan</th>
+            <th>Nama kasir</th><th class="us-c-id">ID karyawan</th><th class="us-c-user">Username</th><th class="us-c-slot">Penugasan</th>
             <th class="us-c-status">Status</th><th class="us-c-act"><span class="pd-sr">Aksi</span></th>
           </tr></thead>
           <tbody data-part="list"></tbody>
@@ -156,19 +160,19 @@ function shell() {
       </div>
       <div class="pd-foot" data-part="foot"></div>
     </section>
-    <p class="pd-note">${icons.info}Akun contoh hanya profil; tidak ada login maupun password.</p>`;
+    <p class="pd-note">${icons.info}ID karyawan dibuat otomatis. Kata sandi tidak ditampilkan.</p>`;
 }
 
-// Mengisi ulang bagian yang berubah tanpa merender ulang kolom pencarian (fokus tetap).
 function paint(root) {
+  if (!root.isConnected) return;
   const rows = filtered();
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   view.page = Math.min(Math.max(1, view.page), pages);
   const start = (view.page - 1) * PAGE_SIZE;
   const slice = rows.slice(start, start + PAGE_SIZE);
   const set = (part, html) => {
-    const el = root.querySelector(`[data-part="${part}"]`);
-    if (el) el.innerHTML = html;
+    const element = root.querySelector(`[data-part="${part}"]`);
+    if (element) element.innerHTML = html;
   };
   set("stats", statsHtml());
   set("chips", chipsHtml());
@@ -176,75 +180,203 @@ function paint(root) {
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));
 }
 
-function bind(root, edit) {
+function apiErrorMessage(error) {
+  if (!(error instanceof ApiError)) return "Terjadi kesalahan. Coba lagi.";
+  if (error.status === 0) return "Tidak dapat terhubung ke backend.";
+  if (error.status === 401) return "Sesi login habis. Keluar lalu login kembali.";
+  if (error.status === 403) return "Hanya manager yang dapat mengelola akun kasir.";
+  if (error.code === "username_taken") return "Username sudah digunakan.";
+  if (error.code === "invalid_user") return "Periksa nama, password, dan penugasan shift.";
+  if (error.code === "cashier_not_found") return "Akun kasir tidak ditemukan.";
+  if (error.code === "database_unavailable") return "Database belum dapat diakses.";
+  return "Permintaan gagal. Coba lagi.";
+}
+
+async function loadUsers(root) {
+  loadState = "loading";
+  loadError = "";
+  paint(root);
+  try {
+    const result = await apiRequest("/api/users");
+    cashierUsers = result.users
+      .filter((user) => user.role === "cashier")
+      .map((user) => ({ ...user, is_active: Boolean(user.is_active) }));
+    loadState = "ready";
+  } catch (error) {
+    loadState = "error";
+    loadError = apiErrorMessage(error);
+  }
+  paint(root);
+}
+
+function openEditor(root, user = null) {
+  const isEditing = Boolean(user);
+  const elements = [
+    { view: "text", name: "name", label: "Nama", required: true },
+    ...(isEditing
+      ? [
+          {
+            view: "text",
+            name: "username",
+            label: "Username",
+            readonly: true,
+          },
+        ]
+      : [
+          { view: "text", name: "username", label: "Username", required: true },
+          {
+            view: "text",
+            type: "password",
+            name: "password",
+            label: "Kata sandi",
+            required: true,
+          },
+        ]),
+    {
+      view: "richselect",
+      name: "assigned_shift",
+      label: "Penugasan shift",
+      required: true,
+      options: [
+        { id: "shift_1", value: "Shift 1 · 07.00–15.00" },
+        { id: "shift_2", value: "Shift 2 · 15.00–22.00" },
+      ],
+    },
+    ...(isEditing
+      ? [
+          {
+            view: "checkbox",
+            name: "is_active",
+            labelRight: "Akun aktif",
+            labelWidth: 0,
+          },
+          {
+            view: "text",
+            type: "password",
+            name: "password",
+            label: "Kata sandi baru (opsional)",
+          },
+        ]
+      : []),
+    {
+      cols: [
+        {
+          view: "button",
+          value: "Batal",
+          click: () => windowView.close(),
+        },
+        {
+          view: "button",
+          id: "cashierEditorSave",
+          value: isEditing ? "Simpan perubahan" : "Buat akun",
+          css: "webix_primary",
+          click: save,
+        },
+      ],
+    },
+  ];
+
+  let windowView;
+  let form;
+  async function save() {
+    if (!form.validate()) return;
+    const values = form.getValues();
+    const saveButton = $$('cashierEditorSave');
+    saveButton.disable();
+    try {
+      if (isEditing) {
+        const changes = {
+          name: values.name.trim(),
+          assigned_shift: values.assigned_shift,
+          is_active: values.is_active === true || values.is_active === 1 || values.is_active === "1",
+        };
+        if (values.password) changes.password = values.password;
+        await apiRequest(`/api/users/${encodeURIComponent(user.id)}`, {
+          method: "PATCH",
+          body: JSON.stringify(changes),
+        });
+      } else {
+        await apiRequest("/api/users", {
+          method: "POST",
+          body: JSON.stringify({
+            name: values.name.trim(),
+            username: values.username.trim(),
+            password: values.password,
+            assigned_shift: values.assigned_shift,
+          }),
+        });
+      }
+      windowView.close();
+      webix.message({
+        type: "success",
+        text: isEditing ? "Akun kasir diperbarui." : "Akun kasir berhasil dibuat.",
+      });
+      await loadUsers(root);
+    } catch (error) {
+      webix.message({ type: "error", text: apiErrorMessage(error) });
+      saveButton.enable();
+    }
+  }
+
+  windowView = webix.ui({
+    view: "window",
+    modal: true,
+    position: "center",
+    width: Math.min(520, window.innerWidth - 24),
+    head: isEditing ? "Ubah akun kasir" : "Tambah kasir",
+    body: {
+      view: "form",
+      id: "cashierEditorForm",
+      padding: 24,
+      elementsConfig: { labelPosition: "top" },
+      elements,
+    },
+  });
+  form = $$("cashierEditorForm");
+  form.setValues(
+    isEditing
+      ? {
+          name: user.name,
+          username: user.username,
+          assigned_shift: user.assigned_shift,
+          is_active: user.is_active ? 1 : 0,
+        }
+      : { assigned_shift: "shift_1" },
+  );
+  windowView.show();
+}
+
+function bind(root) {
   if (root._usBound) return;
   root._usBound = true;
-  root.addEventListener("click", (e) => {
-    const el = e.target.closest("[data-act]");
-    if (!el || el.disabled) return;
-    const act = el.dataset.act;
-    if (act === "add") return edit();
-    if (act === "edit")
-      return edit(state.users.find((u) => String(u.id) === el.dataset.id));
-    if (act === "status") {
-      view.status = el.dataset.value;
+  root.addEventListener("click", (event) => {
+    const element = event.target.closest("[data-act]");
+    if (!element || element.disabled) return;
+    const action = element.dataset.act;
+    if (action === "add") return openEditor(root);
+    if (action === "retry") return loadUsers(root);
+    if (action === "edit") {
+      const user = cashierUsers.find((item) => String(item.id) === element.dataset.id);
+      if (user) openEditor(root, user);
+      return;
+    }
+    if (action === "status") {
+      view.status = element.dataset.value;
       view.page = 1;
-    } else if (act === "page") {
-      view.page = +el.dataset.page;
+    } else if (action === "page") {
+      view.page = Number(element.dataset.page);
     }
     paint(root);
   });
-  root.addEventListener("input", (e) => {
-    if (!e.target.matches(".pd-search input")) return;
-    view.q = e.target.value;
+  root.addEventListener("input", (event) => {
+    if (!event.target.matches(".pd-search input")) return;
+    view.q = event.target.value;
     view.page = 1;
     paint(root);
   });
 }
 
-export function users(refresh) {
-  function edit(user = { active: true, assigned_shift: "shift_1" }) {
-    editor(
-      user.id ? "Ubah akun kasir demo" : "Tambah akun kasir demo",
-      [
-        { view: "text", name: "name", label: "Nama", required: true },
-        { view: "text", name: "username", label: "Username", required: true },
-        {
-          view: "richselect",
-          name: "assigned_shift",
-          label: "Penugasan shift",
-          options: [
-            { id: "shift_1", value: "Shift 1 · 07.00–15.00" },
-            { id: "shift_2", value: "Shift 2 · 15.00–22.00" },
-          ],
-        },
-        {
-          view: "checkbox",
-          name: "active",
-          labelRight: "Akun aktif",
-          labelWidth: 0,
-        },
-      ],
-      user,
-      (v) => {
-        if (
-          !v.name.trim() ||
-          !v.username.trim() ||
-          state.users.some((u) => u.username === v.username && u.id !== user.id)
-        ) {
-          webix.message({
-            type: "error",
-            text: "Isi nama dan username yang unik.",
-          });
-          return false;
-        }
-        const value = { ...v, id: user.id || uid(), active: !!+v.active };
-        if (user.id) Object.assign(user, value);
-        else state.users.push(value);
-        refresh();
-      },
-    );
-  }
+export function users() {
   return {
     view: "template",
     css: "product-page",
@@ -252,8 +384,10 @@ export function users(refresh) {
     template: shell,
     on: {
       onAfterRender() {
-        paint(this.$view);
-        bind(this.$view, edit);
+        const root = this.$view;
+        bind(root);
+        paint(root);
+        loadUsers(root);
       },
     },
   };
