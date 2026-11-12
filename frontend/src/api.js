@@ -1,5 +1,8 @@
+const defaultApiBaseUrl = window.location.port === "8080"
+  ? "http://127.0.0.1:5000"
+  : "";
 const API_BASE_URL = (
-  window.RITELY_API_BASE_URL || "http://127.0.0.1:5000"
+  window.RITELY_API_BASE_URL || defaultApiBaseUrl
 ).replace(/\/$/, "");
 
 let accessToken = null;

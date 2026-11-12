@@ -45,10 +45,10 @@ export function navbar(role, logout) {
         template: () => {
           const cashier = state.currentUser;
           const name = escape(cashier?.name || "Kasir");
-          const id = escape(cashier?.id || "—");
+          const id = escape(cashier?.employee_id || "Belum ada");
           return `<div class="cashier-identity-inner">
             <img class="cashier-avatar" src="./assets/images/cashier-dina.svg" alt="Foto profil ${name}">
-            <div class="cashier-details"><strong>${name}</strong><span>ID kasir · ${id}</span></div>
+            <div class="cashier-details"><strong>${name}</strong><span>ID karyawan · ${id}</span></div>
             <div class="cashier-clock"><span>WAKTU</span><strong data-cashier-clock>${jakartaTime()}</strong></div>
           </div>`;
         },

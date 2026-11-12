@@ -2,6 +2,7 @@
 
 import bcrypt
 from bson import ObjectId
+from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 from app.models.user import ASSIGNED_SHIFTS, build_user_document, public_user
@@ -9,6 +10,24 @@ from app.models.user import ASSIGNED_SHIFTS, build_user_document, public_user
 
 class DuplicateUsernameError(Exception):
     """Raised when a username is already in use."""
+
+
+def _next_cashier_employee_id(collection, session=None):
+    counters = collection.database["counters"]
+    counter_id = "cashier_employee_id"
+    counters.update_one(
+        {"_id": counter_id},
+        {"$setOnInsert": {"value": 0}},
+        upsert=True,
+        session=session,
+    )
+    counter = counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"value": 1}},
+        return_document=ReturnDocument.AFTER,
+        session=session,
+    )
+    return f"KSR-{counter['value']:04d}"
 
 
 def _hash_password(password, bcrypt_rounds):
@@ -27,7 +46,11 @@ def _hash_password(password, bcrypt_rounds):
 def create_user(collection, data, bcrypt_rounds=12, session=None):
     password = data.get("password")
     password_hash = _hash_password(password, bcrypt_rounds)
-    document = build_user_document(data, password_hash)
+    role = data.get("role")
+    employee_id = None
+    if isinstance(role, str) and role.strip().lower() == "cashier":
+        employee_id = _next_cashier_employee_id(collection, session=session)
+    document = build_user_document(data, password_hash, employee_id=employee_id)
 
     try:
         result = collection.insert_one(document, session=session)

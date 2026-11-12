@@ -7,7 +7,7 @@ USER_ROLES = {"manager", "cashier"}
 ASSIGNED_SHIFTS = {"shift_1", "shift_2"}
 
 
-def build_user_document(data, password_hash):
+def build_user_document(data, password_hash, employee_id=None):
     name = data.get("name")
     username = data.get("username")
     role = data.get("role")
@@ -48,7 +48,10 @@ def build_user_document(data, password_hash):
     if role == "cashier":
         if assigned_shift not in ASSIGNED_SHIFTS:
             raise ValueError("Kasir wajib ditugaskan ke shift_1 atau shift_2.")
+        if not isinstance(employee_id, str) or not employee_id.strip():
+            raise ValueError("ID karyawan kasir wajib diisi.")
         document["assigned_shift"] = assigned_shift
+        document["employee_id"] = employee_id.strip()
     elif assigned_shift is not None:
         raise ValueError("Akun manager tidak menggunakan assigned_shift.")
 
@@ -72,4 +75,5 @@ def public_user(document):
     }
     if document["role"] == "cashier":
         result["assigned_shift"] = document["assigned_shift"]
+        result["employee_id"] = document.get("employee_id")
     return result

@@ -13,4 +13,10 @@ def get_users_collection():
     )
     collection = database["users"]
     collection.create_index("username", unique=True, name="uq_users_username")
+    collection.create_index(
+        "employee_id",
+        unique=True,
+        sparse=True,
+        name="uq_users_employee_id",
+    )
     return collection

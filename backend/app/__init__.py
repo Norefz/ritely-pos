@@ -1,6 +1,8 @@
-"""Application factory for the Ritely POS API."""
+"""Application factory for the Ritely POS web app and API."""
 
-from flask import Flask, jsonify
+from pathlib import Path
+
+from flask import Flask, abort, jsonify, send_from_directory
 from flask_cors import CORS
 
 from app.config import Config
@@ -11,6 +13,7 @@ from app.controllers.users import users_bp
 
 def create_app(config_object=Config):
     app = Flask(__name__)
+    frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
     app.config.from_object(config_object)
     CORS(
         app,
@@ -31,11 +34,15 @@ def create_app(config_object=Config):
 
     @app.get("/")
     def index():
-        return jsonify(
-            service="Ritely POS API",
-            status="running",
-            database_check="/api/health/db",
-        )
+        if frontend_dir.is_dir():
+            return send_from_directory(frontend_dir, "index.html")
+        return jsonify(service="Ritely POS API", status="running")
+
+    @app.get("/<path:asset_path>")
+    def frontend_asset(asset_path):
+        if asset_path == "api" or asset_path.startswith("api/"):
+            abort(404)
+        return send_from_directory(frontend_dir, asset_path)
 
     return app
 
