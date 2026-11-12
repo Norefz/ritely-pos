@@ -50,7 +50,7 @@ export function navbar(role, logout) {
           const avatar = cashierAvatarSrc(cashier);
           return `<div class="cashier-identity-inner">
             <img class="cashier-avatar" src="${avatar}" alt="Foto profil ${name}">
-            <div class="cashier-details"><strong>${name}</strong><span>ID karyawan · ${id}</span></div>
+            <div class="cashier-details"><strong>${name}</strong><span>${id}</span></div>
             <div class="cashier-clock"><span>WAKTU</span><strong data-cashier-clock>${jakartaTime()}</strong></div>
           </div>`;
         },
