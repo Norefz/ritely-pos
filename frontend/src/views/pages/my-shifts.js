@@ -1,4 +1,5 @@
-import { state, money, date, completed, uid, escape } from "../../demo.js";
+import { state, money, date, escape } from "../../demo.js";
+import { ApiError, closeShiftRequest, openShiftRequest } from "../../api.js";
 
 /* ---------- Halaman Shift saya: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -44,19 +45,24 @@ const SCHEDULE = [
   },
 ];
 
-const salesOf = (shift) =>
-  completed()
-    .filter((s) => s.shift_id === shift.id)
-    .reduce((n, s) => n + s.total, 0);
-
-const cashier = () => state.users.find((user) => user.username === "dina");
-const cashierName = () => cashier()?.name || "Dina Pratiwi";
+const salesOf = (shift) => shift.sales_total || 0;
+const cashier = () => state.currentUser;
+const cashierName = () => cashier()?.name || "Kasir";
+const isMine = (shift) => shift.cashier_id === state.currentUser?.id;
 const shiftsForMe = () =>
-  state.shifts.filter((shift) => shift.cashier === cashierName());
+  state.shifts.filter(isMine);
 const myOpenShift = () =>
-  state.shift?.cashier !== cashierName()
+  !state.shift || !isMine(state.shift)
     ? null
     : state.shift;
+const shiftError = (error) => {
+  if (!(error instanceof ApiError)) return "Shift gagal diperbarui.";
+  if (error.code === "shift_already_open") return "Shift lain masih berjalan di toko.";
+  if (error.code === "invalid_shift") return "Akun ini belum mendapat jadwal shift yang valid.";
+  if (error.code === "shift_not_open") return "Shift sudah ditutup.";
+  if (error.code === "database_unavailable") return "Database belum dapat dijangkau.";
+  return "Tidak dapat mengubah shift. Periksa koneksi backend.";
+};
 
 function pageItems(cur, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -102,12 +108,12 @@ function statusHtml() {
   const open = !!openShift;
   const otherShiftOpen = !open && !!state.shift;
   const action = open
-    ? `<button type="button" class="sh-btn primary" data-act="close">Tutup shift demo</button>`
+    ? `<button type="button" class="sh-btn primary" data-act="close">Tutup shift</button>`
     : !otherShiftOpen
-      ? `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift demo</button>`
+      ? `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`
       : "";
   const title = open
-    ? "Shift demo sedang berjalan"
+    ? "Shift sedang berjalan"
     : otherShiftOpen
       ? "Shift kasir lain sedang berjalan"
       : "Belum ada shift terbuka";
@@ -120,7 +126,7 @@ function statusHtml() {
     ? "Pastikan keranjang kosong sebelum menutup shift."
     : otherShiftOpen
       ? "Satu shift sedang berjalan di toko. Shift ini tidak termasuk riwayat Shift saya."
-      : "Mode demo: shift dapat dibuka dan ditutup kapan saja.";
+      : "Saat membuka shift, sistem mencatat waktu dan akun kasir ke database.";
   return `
     <div class="sh-state${open ? " open" : ""}">
       <i class="sh-state-ico">${open ? icons.play : icons.lock}</i>
@@ -179,7 +185,7 @@ function historyHtml() {
 function shell() {
   return `
     <div class="pd-head">
-      <div><h1>Shift saya</h1><p>Lihat dan kelola shift demo milik saya.</p></div>
+      <div><h1>Shift saya</h1><p>Lihat jadwal, status, dan riwayat shift saya.</p></div>
     </div>
     <section class="pd-card pd-stats">${statsHtml()}</section>
     <section class="pd-card sh-panel">${statusHtml()}</section>
@@ -202,10 +208,10 @@ function bind(root, actions) {
 }
 
 export function myShifts(refresh) {
-  function close(reason = "") {
+  async function close() {
     if (
       !state.shift ||
-      state.shift.cashier !== cashierName()
+      !isMine(state.shift)
     ) {
       webix.message({
         type: "error",
@@ -220,16 +226,20 @@ export function myShifts(refresh) {
       });
       return false;
     }
-    Object.assign(state.shift, {
-      status: "closed",
-      closed_at: new Date().toISOString(),
-      reason,
-    });
-    state.shift = null;
-    refresh();
+    try {
+      const result = await closeShiftRequest(state.shift.id);
+      state.shifts = state.shifts.map((shift) =>
+        shift.id === result.shift.id ? result.shift : shift,
+      );
+      state.shift = null;
+      refresh();
+      webix.message("Shift berhasil ditutup.");
+    } catch (error) {
+      webix.message({ type: "error", text: shiftError(error) });
+    }
   }
   const actions = {
-    open() {
+    async open() {
       if (state.shift) {
         webix.message({
           type: "error",
@@ -237,20 +247,20 @@ export function myShifts(refresh) {
         });
         return;
       }
-      const s = {
-        id: uid(),
-        cashier: cashierName(),
-        status: "open",
-        opened_at: new Date().toISOString(),
-      };
-      state.shift = s;
-      state.shifts.push(s);
-      view.page = 1;
-      refresh();
+      try {
+        const result = await openShiftRequest();
+        state.shift = result.shift;
+        state.shifts.push(result.shift);
+        view.page = 1;
+        refresh();
+        webix.message("Shift berhasil dibuka.");
+      } catch (error) {
+        webix.message({ type: "error", text: shiftError(error) });
+      }
     },
     close() {
       webix
-        .confirm("Tutup shift demo ini?")
+        .confirm("Tutup shift ini?")
         .then(() => close())
         .catch(() => {});
     },

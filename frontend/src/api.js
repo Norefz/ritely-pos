@@ -71,6 +71,21 @@ export async function currentUserRequest() {
   return result.user;
 }
 
+export async function shiftsRequest() {
+  return apiRequest("/api/shifts");
+}
+
+export async function openShiftRequest() {
+  return apiRequest("/api/shifts/open", { method: "POST" });
+}
+
+export async function closeShiftRequest(shiftId, reason = "") {
+  return apiRequest(`/api/shifts/${encodeURIComponent(shiftId)}/close`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export function hasAccessToken() {
   return Boolean(accessToken);
 }

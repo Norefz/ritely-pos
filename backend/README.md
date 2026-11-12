@@ -69,3 +69,16 @@ akun Kasir melalui `POST /api/users` dengan `name`, `username`, `password`, dan
 `assigned_shift` (`shift_1` atau `shift_2`), serta mengubah profil/status Kasir
 melalui `PATCH /api/users/<id>`.
 
+## Shift
+
+Shift tersimpan di collection `shifts`. `GET /api/shifts` mengembalikan shift aktif
+dan riwayat (Manajer melihat semua; Kasir hanya riwayatnya sendiri). Kasir membuka
+shift dengan `POST /api/shifts/open` dan menutup shift miliknya melalui
+`POST /api/shifts/<id>/close`. Manajer dapat menutup shift aktif dari halaman
+Shift dengan menyertakan alasan; aksi buka/tutup dicatat pada `audit_logs`.
+Index unik pada shift berstatus `open` memastikan hanya satu shift aktif di toko.
+
+Shift dan statusnya sudah tersimpan di backend. Data penjualan pada POS masih
+simulasi frontend, sehingga total penjualan/transaksi belum direkonsiliasi ke
+collection shift.
+

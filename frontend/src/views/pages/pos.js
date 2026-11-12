@@ -1,5 +1,6 @@
 import { state, money, total, uid, escape } from "../../demo.js";
 import { receipt } from "./common.js";
+import { ApiError, openShiftRequest } from "../../api.js";
 
 const productImages = {
   "Air mineral 600 ml":
@@ -38,6 +39,8 @@ const activeProducts = () => state.products.filter((p) => p.active);
 const findProduct = (id) => state.products.find((p) => String(p.id) === id);
 const inCart = (id) =>
   state.cart.find((i) => String(i.id) === id)?.quantity || 0;
+const currentShift = () =>
+  state.shift?.cashier_id === state.currentUser?.id ? state.shift : null;
 
 function initials(name) {
   const w = name.trim().split(/\s+/);
@@ -113,7 +116,8 @@ function shell() {
     !state.categories.some((c) => String(c.id) === view.category)
   )
     view.category = "all";
-  const open = !!state.shift;
+  const open = !!currentShift();
+  const otherShift = !!state.shift && !open;
   const since = open
     ? new Intl.DateTimeFormat("id-ID", {
         hour: "2-digit",
@@ -125,8 +129,8 @@ function shell() {
     <div class="ps-wrap">
       <div class="ps-top">
         <label class="pd-search">${icons.search}<input type="search" placeholder="Cari produk atau scan barcode" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
-        <span class="ps-shift${open ? " on" : ""}"><span></span>${open ? `Shift 1 · terbuka sejak ${since} WIB` : "Shift belum dibuka"}</span>
-        ${open ? "" : `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift demo</button>`}
+        <span class="ps-shift${open ? " on" : ""}"><span></span>${open ? `${escape(state.shift.assigned_shift.replace("_", " "))} · terbuka sejak ${since} WIB` : otherShift ? `Shift ${escape(state.shift.cashier)} sedang berjalan` : "Shift belum dibuka"}</span>
+        ${open || otherShift ? "" : `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`}
       </div>
       <div class="ps-main">
         <section class="ps-catalog">
@@ -184,7 +188,7 @@ function paint(root) {
   const pay = root.querySelector('[data-act="pay"]');
   if (pay) {
     pay.textContent = `Bayar ${money(total())}`;
-    pay.classList.toggle("idle", !state.shift || !state.cart.length);
+    pay.classList.toggle("idle", !currentShift() || !state.cart.length);
   }
   root.querySelectorAll(".ps-card").forEach((card) => {
     const badge = card.querySelector("[data-badge]");
@@ -234,10 +238,10 @@ function bind(root, actions) {
 
 export function pos(refresh) {
   function add(root, id) {
-    if (!state.shift) {
+    if (!currentShift()) {
       webix.message({
         type: "error",
-        text: "Buka shift demo melalui menu Shift saya terlebih dahulu.",
+        text: "Buka shift milik Anda melalui menu Shift saya terlebih dahulu.",
       });
       return;
     }
@@ -267,21 +271,24 @@ export function pos(refresh) {
       state.cart = state.cart.filter((i) => String(i.id) !== id);
     paint(root);
   }
-  function openShift() {
-    const s = {
-      id: uid(),
-      cashier: "Dina Pratiwi",
-      status: "open",
-      opened_at: new Date().toISOString(),
-    };
-    state.shift = s;
-    state.shifts.push(s);
-    refresh();
+  async function openShift() {
+    try {
+      const result = await openShiftRequest();
+      state.shift = result.shift;
+      state.shifts.push(result.shift);
+      refresh();
+      webix.message("Shift berhasil dibuka.");
+    } catch (error) {
+      const message = error instanceof ApiError && error.code === "shift_already_open"
+        ? "Kasir lain masih memiliki shift yang berjalan."
+        : "Shift gagal dibuka. Periksa koneksi backend dan jadwal akun Anda.";
+      webix.message({ type: "error", text: message });
+    }
   }
   function pay(root) {
     const cash = +(root.querySelector(".ps-cash input")?.value ?? 0);
     if (
-      !state.shift ||
+      !currentShift() ||
       !state.cart.length ||
       !Number.isFinite(cash) ||
       cash < total()
@@ -313,8 +320,8 @@ export function pos(refresh) {
           id: "DEMO-" + uid().slice(0, 8),
           created_at: new Date().toISOString(),
           paid_at: new Date().toISOString(),
-          shift_id: state.shift.id,
-          cashier: "Dina Pratiwi",
+          shift_id: currentShift().id,
+          cashier: state.currentUser?.name || "Kasir",
           payment_method: "cash",
           items: state.cart.map((i) => ({ ...i })),
           total: total(),

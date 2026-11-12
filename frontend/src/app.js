@@ -18,6 +18,7 @@ import {
   currentUserRequest,
   hasAccessToken,
   logoutRequest,
+  shiftsRequest,
 } from "./api.js";
 let current = "dashboard";
 const factories = {
@@ -88,8 +89,9 @@ function mountApplication() {
             height: 42,
             css: "demo-banner",
             borderless: true,
-            template:
-              "Login terhubung ke backend · Data operasional masih berupa demo frontend.",
+            template: state.shiftLoadError
+              ? "Shift gagal dimuat dari backend · Periksa koneksi, lalu muat ulang halaman."
+              : "Login dan shift terhubung ke backend · Data produk, stok, dan transaksi masih demo.",
           },
           { view: "layout", id: "contentHost", rows: [] },
         ],
@@ -120,14 +122,28 @@ function mountLogin() {
     container: "app",
     id: "loginScreen",
     rows: [
-      login((user) => {
+      login(async (user) => {
         state.currentUser = user;
         state.role = user.role;
+        await hydrateShifts();
         $$("loginScreen").destructor();
         mountApplication();
       }),
     ],
   });
+}
+
+async function hydrateShifts() {
+  try {
+    const snapshot = await shiftsRequest();
+    state.shift = snapshot.open_shift || null;
+    state.shifts = snapshot.shifts || [];
+    state.shiftLoadError = false;
+  } catch {
+    state.shift = null;
+    state.shifts = [];
+    state.shiftLoadError = true;
+  }
 }
 
 function mountSessionRecovery(error) {
@@ -164,6 +180,7 @@ async function initializeApp() {
     const user = await currentUserRequest();
     state.currentUser = user;
     state.role = user.role;
+    await hydrateShifts();
     mountApplication();
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {

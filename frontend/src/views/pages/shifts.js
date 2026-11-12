@@ -1,5 +1,6 @@
-import { state, money, date, completed, uid, escape } from "../../demo.js";
+import { state, money, date, escape } from "../../demo.js";
 import { editor } from "./common.js";
+import { ApiError, closeShiftRequest } from "../../api.js";
 
 /* ---------- Halaman Shift manajer: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -43,13 +44,14 @@ const SCHEDULE = [
   },
 ];
 
-const salesOf = (shift) =>
-  completed()
-    .filter((s) => s.shift_id === shift.id)
-    .reduce((n, s) => n + s.total, 0);
-
-const cashierName = () =>
-  state.users.find((user) => user.username === "dina")?.name || "Dina Pratiwi";
+const salesOf = (shift) => shift.sales_total || 0;
+const shiftError = (error) => {
+  if (!(error instanceof ApiError)) return "Shift gagal diperbarui.";
+  if (error.code === "shift_not_open") return "Shift sudah ditutup.";
+  if (error.code === "shift_not_found") return "Shift tidak ditemukan.";
+  if (error.code === "database_unavailable") return "Database belum dapat dijangkau.";
+  return "Tidak dapat mengubah shift. Periksa koneksi backend.";
+};
 
 function pageItems(cur, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -89,13 +91,13 @@ function statusHtml() {
   const open = !!openShift;
   const manager = true;
   const action = open
-    ? `<button type="button" class="sh-btn${manager ? " danger" : " primary"}" data-act="close">${manager ? "Tutup paksa demo" : "Tutup shift demo"}</button>`
+    ? `<button type="button" class="sh-btn${manager ? " danger" : " primary"}" data-act="close">${manager ? "Tutup paksa" : "Tutup shift"}</button>`
     : "";
   const title = open
-    ? "Shift demo sedang berjalan"
+    ? "Shift sedang berjalan"
     : "Belum ada shift terbuka";
   const sub = open
-    ? `${escape(openShift.cashier || cashierName())} · Dibuka ${escape(date(openShift.opened_at))}`
+    ? `${escape(openShift.cashier)} · Dibuka ${escape(date(openShift.opened_at))}`
     : "Transaksi kasir baru bisa dicatat setelah seorang kasir membuka shift.";
   const note = open
     ? "Penutupan paksa oleh Manajer wajib disertai alasan dan akan tercatat pada riwayat."
@@ -181,7 +183,7 @@ function bind(root, actions) {
 }
 
 export function shifts(refresh) {
-  function close(reason = "") {
+  async function close(reason = "") {
     if (!state.shift) {
       webix.message({
         type: "error",
@@ -196,34 +198,19 @@ export function shifts(refresh) {
       });
       return false;
     }
-    Object.assign(state.shift, {
-      status: "closed",
-      closed_at: new Date().toISOString(),
-      reason,
-    });
-    state.shift = null;
-    refresh();
+    try {
+      const result = await closeShiftRequest(state.shift.id, reason);
+      state.shifts = state.shifts.map((shift) =>
+        shift.id === result.shift.id ? result.shift : shift,
+      );
+      state.shift = null;
+      refresh();
+      webix.message("Shift berhasil ditutup.");
+    } catch (error) {
+      webix.message({ type: "error", text: shiftError(error) });
+    }
   }
   const actions = {
-    open() {
-      if (state.shift) {
-        webix.message({
-          type: "error",
-          text: "Selesaikan shift yang sedang berjalan sebelum membuka shift baru.",
-        });
-        return;
-      }
-      const s = {
-        id: uid(),
-        cashier: cashierName(),
-        status: "open",
-        opened_at: new Date().toISOString(),
-      };
-      state.shift = s;
-      state.shifts.push(s);
-      view.page = 1;
-      refresh();
-    },
     close() {
       editor(
         "Penutupan paksa",
@@ -238,7 +225,7 @@ export function shifts(refresh) {
         {},
         (v) => {
           if (!v.reason.trim()) return false;
-          return close(v.reason);
+          close(v.reason);
         },
       );
     },

@@ -1,4 +1,4 @@
-import { state, money, date, completed } from "../../demo.js";
+import { state, money, date, completed, escape } from "../../demo.js";
 import { heading, table, button } from "./common.js";
 const hourly = [
   ["08.00", 4],
@@ -79,7 +79,7 @@ function hourlyChart() {
 }
 function shiftsPanel() {
   if (state.shift)
-    return `<div class="running-shift"><div class="shift-line"><strong>Dina · Register 01</strong><span class="state-tag good">Terbuka</span></div><p>Shift 1 · sejak ${date(state.shift.opened_at)}</p><button class="force-close" onclick="location.hash='shifts'">Tutup paksa shift</button></div><div class="next-shift"><strong>Shift 2 · 15.00–22.00</strong><span class="state-tag">Belum mulai</span><p>Menunggu kasir membuka shift.</p></div>`;
+    return `<div class="running-shift"><div class="shift-line"><strong>${escape(state.shift.cashier)} · Register 01</strong><span class="state-tag good">Terbuka</span></div><p>${state.shift.assigned_shift === "shift_2" ? "Shift 2 · 15.00–22.00" : "Shift 1 · 07.00–15.00"} · sejak ${date(state.shift.opened_at)}</p><button class="force-close" onclick="location.hash='shifts'">Kelola shift</button></div><div class="next-shift"><strong>Shift berjalan</strong><span class="state-tag">Satu kasir aktif</span><p>Penutupan dilakukan dari menu Shift.</p></div>`;
   return '<div class="next-shift"><strong>Belum ada shift yang dibuka</strong><span class="state-tag">Register siap</span><p>Shift 1 · 07.00–15.00 WIB</p></div><div class="next-shift"><strong>Shift 2 · 15.00–22.00</strong><span class="state-tag">Belum mulai</span><p>Menunggu kasir membuka shift.</p></div>';
 }
 export function dashboard(navigate) {
@@ -133,7 +133,7 @@ export function dashboard(navigate) {
           view: "template",
           height: 120,
           css: "manager-kpis",
-          template: `<div class="kpi-sales"><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong></div><div class="kpi-count"><span>Transaksi</span><strong>${count}</strong></div><div class="kpi-average"><span>Rata-rata / transaksi</span><strong class="kpi-money">${money(avg)}</strong></div><div class="kpi-shifts"><span>Shift terbuka</span><strong>1 dari 2</strong></div>`,
+          template: `<div class="kpi-sales"><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong></div><div class="kpi-count"><span>Transaksi</span><strong>${count}</strong></div><div class="kpi-average"><span>Rata-rata / transaksi</span><strong class="kpi-money">${money(avg)}</strong></div><div class="kpi-shifts"><span>Shift terbuka</span><strong>${state.shift ? "1 dari 1" : "0 dari 1"}</strong></div>`,
         },
         {
           height: 380,
