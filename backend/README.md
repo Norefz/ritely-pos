@@ -77,8 +77,16 @@ shift dengan `POST /api/shifts/open` dan menutup shift miliknya melalui
 `POST /api/shifts/<id>/close`. Manajer dapat menutup shift aktif dari halaman
 Shift dengan menyertakan alasan; aksi buka/tutup dicatat pada `audit_logs`.
 Index unik pada shift berstatus `open` memastikan hanya satu shift aktif di toko.
+Pada mode operasional, kasir hanya dapat membuka shift sesuai penugasannya dan
+dalam rentang WIB: Shift 1 07.00–15.00, Shift 2 15.00–22.00 (awal termasuk,
+akhir tidak termasuk). Sistem tidak menutup shift otomatis. Kasir dapat menutup
+shift sendiri pada atau setelah waktu akhir; Manajer dapat force close kapan saja
+dengan alasan. Keduanya ditolak jika shift masih memiliki transaksi `pending`.
+Karena itu, kasir berikutnya baru dapat membuka shift setelah shift aktif ditutup.
+Penjualan dan jumlah transaksi shift dihitung saat diminta dari transaksi
+`completed`/`paid`, bukan disimpan sebagai total manual pada dokumen shift.
 
-Shift dan statusnya sudah tersimpan di backend. Data penjualan pada POS masih
-simulasi frontend, sehingga total penjualan/transaksi belum direkonsiliasi ke
-collection shift.
+Shift dan statusnya sudah tersimpan di backend. POS saat ini masih simulasi
+frontend, jadi belum membuat transaksi operasional `pending` atau `completed`;
+integrasi transaksi backend masih diperlukan agar agregasi penjualan terisi.
 

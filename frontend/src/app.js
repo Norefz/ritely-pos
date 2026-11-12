@@ -21,6 +21,8 @@ import {
   shiftsRequest,
 } from "./api.js";
 let current = "dashboard";
+let shiftSyncTimer = null;
+let syncingShifts = false;
 const factories = {
   dashboard: () => dashboard(navigate),
   products: () => products(refresh),
@@ -103,6 +105,8 @@ function mountApplication() {
       ? location.hash.slice(1)
       : "dashboard",
   );
+  if (shiftSyncTimer) clearInterval(shiftSyncTimer);
+  shiftSyncTimer = setInterval(syncShiftSnapshot, 15000);
   const resize = () => {
     const shell = $$("shell");
     shell.define("width", innerWidth);
@@ -140,9 +144,20 @@ async function hydrateShifts() {
     state.shifts = snapshot.shifts || [];
     state.shiftLoadError = false;
   } catch {
-    state.shift = null;
-    state.shifts = [];
     state.shiftLoadError = true;
+  }
+}
+
+async function syncShiftSnapshot() {
+  if (syncingShifts || !hasAccessToken()) return;
+  syncingShifts = true;
+  const previous = JSON.stringify([state.shift, state.shifts, state.shiftLoadError]);
+  try {
+    await hydrateShifts();
+    const currentSnapshot = JSON.stringify([state.shift, state.shifts, state.shiftLoadError]);
+    if (previous !== currentSnapshot && $$("contentHost")) refresh();
+  } finally {
+    syncingShifts = false;
   }
 }
 

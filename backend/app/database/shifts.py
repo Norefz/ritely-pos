@@ -19,6 +19,12 @@ def get_shifts_collection():
         name="uq_one_open_shift_per_store",
     )
     collection.create_index(
+        "status",
+        unique=True,
+        partialFilterExpression={"status": "open"},
+        name="uq_one_open_shift_by_status",
+    )
+    collection.create_index(
         [("opened_at", 1)],
         name="idx_shifts_opened_at",
     )

@@ -13,6 +13,9 @@ from app.services.shift_service import (
     ShiftAlreadyOpenError,
     ShiftNotFoundError,
     ShiftNotOpenError,
+    ShiftNotEndedError,
+    ShiftOutsideWindowError,
+    ShiftPendingSalesError,
     ShiftOwnershipError,
     close_shift,
     get_shift_snapshot,
@@ -53,7 +56,7 @@ def _audit_log(session, user, action, shift, reason=""):
             "details": {
                 "employee_id": shift.get("employee_id"),
                 "assigned_shift": shift["assigned_shift"],
-                "reason": reason,
+                "close_reason": reason,
             },
             "created_at": datetime.now(timezone.utc),
         },
@@ -93,6 +96,8 @@ def post_open_shift():
                 _audit_log(session, user, "shift_opened", shift)
     except ShiftAlreadyOpenError:
         return jsonify(error="shift_already_open"), 409
+    except ShiftOutsideWindowError as error:
+        return jsonify(error="outside_shift_window", message=str(error)), 409
     except ValueError as error:
         return jsonify(error="invalid_shift", message=str(error)), 400
     except PyMongoError:
@@ -137,6 +142,10 @@ def post_close_shift(shift_id):
         return jsonify(error="shift_not_open"), 409
     except ShiftOwnershipError:
         return jsonify(error="shift_not_owned"), 403
+    except ShiftNotEndedError as error:
+        return jsonify(error="shift_not_ended", message=str(error)), 409
+    except ShiftPendingSalesError:
+        return jsonify(error="pending_sales_exist"), 409
     except PyMongoError:
         current_app.logger.exception("Could not close cashier shift")
         return jsonify(error="database_unavailable"), 503

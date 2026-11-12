@@ -1,9 +1,11 @@
 import { state, money, date, escape } from "../../demo.js";
 import { ApiError, closeShiftRequest, openShiftRequest } from "../../api.js";
+import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
 
 /* ---------- Halaman Shift saya: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
 const view = { page: 1 }; // halaman riwayat bertahan saat refresh() membangun ulang halaman
+let scheduleTimer = null;
 
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -55,11 +57,18 @@ const myOpenShift = () =>
   !state.shift || !isMine(state.shift)
     ? null
     : state.shift;
+const scheduleAvailability = () => {
+  const openShift = myOpenShift();
+  return `${openShift?.id || ""}:${openShift ? canCloseShift(openShift.shift_type || openShift.assigned_shift) : false}:${!state.shift && canOpenShift(cashier()?.assigned_shift)}`;
+};
 const shiftError = (error) => {
   if (!(error instanceof ApiError)) return "Shift gagal diperbarui.";
   if (error.code === "shift_already_open") return "Shift lain masih berjalan di toko.";
   if (error.code === "invalid_shift") return "Akun ini belum mendapat jadwal shift yang valid.";
   if (error.code === "shift_not_open") return "Shift sudah ditutup.";
+  if (error.code === "shift_not_ended") return error.message || "Shift belum mencapai waktu penutupan.";
+  if (error.code === "outside_shift_window") return error.message || "Belum masuk jam shift Anda.";
+  if (error.code === "pending_sales_exist") return "Selesaikan transaksi pending sebelum menutup shift.";
   if (error.code === "database_unavailable") return "Database belum dapat dijangkau.";
   return "Tidak dapat mengubah shift. Periksa koneksi backend.";
 };
@@ -107,9 +116,15 @@ function statusHtml() {
   const openShift = myOpenShift();
   const open = !!openShift;
   const otherShiftOpen = !open && !!state.shift;
+  const assignedShift = cashier()?.assigned_shift;
+  const assignedWindow = shiftWindow(assignedShift);
+  const closeAllowed = open && canCloseShift(openShift.shift_type || openShift.assigned_shift);
+  const openAllowed = !state.shift && canOpenShift(assignedShift);
   const action = open
-    ? `<button type="button" class="sh-btn primary" data-act="close">Tutup shift</button>`
-    : !otherShiftOpen
+    ? closeAllowed
+      ? `<button type="button" class="sh-btn primary" data-act="close">Tutup shift</button>`
+      : ""
+    : !otherShiftOpen && openAllowed
       ? `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`
       : "";
   const title = open
@@ -120,13 +135,19 @@ function statusHtml() {
   const sub = open
     ? `${escape(openShift.cashier || cashierName())} · Dibuka ${escape(date(openShift.opened_at))}`
     : otherShiftOpen
-      ? "Saya bisa membuka shift setelah shift yang berjalan selesai."
-      : "Buka shift untuk mulai mencatat transaksi.";
+      ? `${escape(state.shift.cashier)} masih memiliki shift terbuka. Shift berikutnya baru bisa dibuka setelah shift ini ditutup.`
+      : openAllowed
+        ? "Waktu penugasan Anda sedang berlangsung. Buka shift untuk mulai bekerja."
+        : `Shift Anda dijadwalkan pukul ${assignedWindow?.label || "—"} WIB. Pembukaan hanya tersedia selama rentang itu.`;
   const note = open
-    ? "Pastikan keranjang kosong sebelum menutup shift."
+    ? closeAllowed
+      ? "Tutup shift setelah menyelesaikan transaksi pending."
+      : `Shift tidak ditutup otomatis. Tombol tutup tersedia mulai pukul ${shiftWindow(openShift.shift_type || openShift.assigned_shift)?.label.split("–")[1] || "—"} WIB.`
     : otherShiftOpen
-      ? "Satu shift sedang berjalan di toko. Shift ini tidak termasuk riwayat Shift saya."
-      : "Saat membuka shift, sistem mencatat waktu dan akun kasir ke database.";
+      ? "Kasir pemilik shift atau Manajer perlu menutup shift yang berjalan terlebih dahulu."
+      : openAllowed
+        ? "Pembukaan shift dan waktu aktualnya akan dicatat di database."
+        : "Shift hanya bisa dibuka pada jam penugasan yang ditetapkan Manajer.";
   return `
     <div class="sh-state${open ? " open" : ""}">
       <i class="sh-state-ico">${open ? icons.play : icons.lock}</i>
@@ -144,6 +165,7 @@ function rowHtml(s) {
     <td><b class="sh-who">${escape(s.cashier)}</b></td>
     <td>${escape(date(s.opened_at))}</td>
     <td>${s.closed_at ? escape(date(s.closed_at)) : "—"}${s.reason ? `<small class="sh-reason" title="${escape(s.reason)}">Alasan: ${escape(s.reason)}</small>` : ""}</td>
+    <td>${escape(s.closed_by_name || "—")}</td>
     <td><span class="state-tag${open ? " good" : ""}">${open ? "Terbuka" : "Ditutup"}</span></td>
     <td class="pd-r sh-money">${money(salesOf(s))}</td>
   </tr>`;
@@ -157,7 +179,7 @@ function historyHtml() {
   const body = all.length
     ? `<div class="pd-scroll"><table class="pd-table sh-table">
         <thead><tr><th>Kasir</th><th class="sh-c-time">Dibuka (WIB)</th><th class="sh-c-closed">Ditutup (WIB)</th>
-        <th class="sh-c-status">Status</th><th class="sh-c-money pd-r">Total penjualan</th></tr></thead>
+        <th>Ditutup oleh</th><th class="sh-c-status">Status</th><th class="sh-c-money pd-r">Total penjualan</th></tr></thead>
         <tbody>${slice.map(rowHtml).join("")}</tbody></table></div>`
     : `<div class="sh-empty"><i>${icons.hist}</i><b>Belum ada riwayat shift saya</b>
         <p>Shift yang saya buka dan tutup akan tercatat di sini.</p></div>`;
@@ -219,13 +241,6 @@ export function myShifts(refresh) {
       });
       return false;
     }
-    if (state.cart.length) {
-      webix.message({
-        type: "error",
-        text: "Selesaikan atau kosongkan keranjang terlebih dahulu.",
-      });
-      return false;
-    }
     try {
       const result = await closeShiftRequest(state.shift.id);
       state.shifts = state.shifts.map((shift) =>
@@ -241,10 +256,11 @@ export function myShifts(refresh) {
   const actions = {
     async open() {
       if (state.shift) {
-        webix.message({
-          type: "error",
-          text: "Selesaikan shift yang sedang berjalan sebelum membuka shift baru.",
-        });
+        webix.message({ type: "error", text: "Shift sebelumnya harus ditutup terlebih dahulu." });
+        return;
+      }
+      if (!canOpenShift(cashier()?.assigned_shift)) {
+        webix.message({ type: "error", text: shiftError({ code: "outside_shift_window" }) });
         return;
       }
       try {
@@ -273,6 +289,19 @@ export function myShifts(refresh) {
     on: {
       onAfterRender() {
         bind(this.$view, actions);
+        if (scheduleTimer) clearInterval(scheduleTimer);
+        let previous = scheduleAvailability();
+        scheduleTimer = setInterval(() => {
+          const current = scheduleAvailability();
+          if (current !== previous) {
+            previous = current;
+            refresh();
+          }
+        }, 15000);
+      },
+      onDestruct() {
+        if (scheduleTimer) clearInterval(scheduleTimer);
+        scheduleTimer = null;
       },
     },
   };

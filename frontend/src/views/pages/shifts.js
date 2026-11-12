@@ -50,6 +50,7 @@ const shiftError = (error) => {
   if (error.code === "shift_not_open") return "Shift sudah ditutup.";
   if (error.code === "shift_not_found") return "Shift tidak ditemukan.";
   if (error.code === "database_unavailable") return "Database belum dapat dijangkau.";
+  if (error.code === "pending_sales_exist") return "Selesaikan transaksi pending sebelum shift ditutup.";
   return "Tidak dapat mengubah shift. Periksa koneksi backend.";
 };
 
@@ -119,6 +120,7 @@ function rowHtml(s) {
     <td><b class="sh-who">${escape(s.cashier)}</b></td>
     <td>${escape(date(s.opened_at))}</td>
     <td>${s.closed_at ? escape(date(s.closed_at)) : "—"}${s.reason ? `<small class="sh-reason" title="${escape(s.reason)}">Alasan: ${escape(s.reason)}</small>` : ""}</td>
+    <td>${escape(s.closed_by_name || "—")}</td>
     <td><span class="state-tag${open ? " good" : ""}">${open ? "Terbuka" : "Ditutup"}</span></td>
     <td class="pd-r sh-money">${money(salesOf(s))}</td>
   </tr>`;
@@ -132,7 +134,7 @@ function historyHtml() {
   const body = all.length
     ? `<div class="pd-scroll"><table class="pd-table sh-table">
         <thead><tr><th>Kasir</th><th class="sh-c-time">Dibuka (WIB)</th><th class="sh-c-closed">Ditutup (WIB)</th>
-        <th class="sh-c-status">Status</th><th class="sh-c-money pd-r">Total penjualan</th></tr></thead>
+        <th>Ditutup oleh</th><th class="sh-c-status">Status</th><th class="sh-c-money pd-r">Total penjualan</th></tr></thead>
         <tbody>${slice.map(rowHtml).join("")}</tbody></table></div>`
     : `<div class="sh-empty"><i>${icons.hist}</i><b>Belum ada riwayat shift</b>
         <p>Shift yang dibuka dan ditutup kasir akan tercatat di sini.</p></div>`;
@@ -188,13 +190,6 @@ export function shifts(refresh) {
       webix.message({
         type: "error",
         text: "Tidak ada shift yang sedang berjalan.",
-      });
-      return false;
-    }
-    if (state.cart.length) {
-      webix.message({
-        type: "error",
-        text: "Selesaikan atau kosongkan keranjang terlebih dahulu.",
       });
       return false;
     }

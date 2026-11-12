@@ -22,9 +22,9 @@ Buka http://localhost:8080. Jalankan backend pada `http://127.0.0.1:5000` dan pa
 - `src/api.js`: panggilan API backend dan penyimpanan token selama halaman aktif.
 - `src/demo.js`: data simulasi bersama dan format tampilan.
 
-Halaman Manajer: ringkasan, produk, kategori, stok, transaksi, shift, laporan, akun kasir. Halaman Kasir: katalog/keranjang, transaksi, shift. Tambah/ubah produk, penyesuaian stok, kategori, profil kasir, buka/tutup shift, penjualan tunai simulasi, struk, dan ekspor laporan berjalan di browser. Mulai demo kasir dengan membuka shift dahulu. Transaksi hanya berasal dari simulasi yang benar-benar dilakukan dalam sesi.
+Halaman Manajer: ringkasan, produk, kategori, stok, transaksi, shift, laporan, akun kasir. Halaman Kasir: katalog/keranjang, transaksi, shift. Shift memakai backend: pembukaan mengikuti assigned shift dan jam WIB, penutupan normal hanya pada/setelah akhir jadwal, tidak ada penutupan otomatis, dan hanya satu shift terbuka per toko. Transaksi tunai, struk, dan data produk/stok lainnya masih berupa simulasi frontend.
 
-Pembayaran online sengaja dinonaktifkan sampai integrasi backend tersedia. Waktu shift operasional, transaksi, pending/void, filter laporan periode, dan sinkronisasi data masih perlu implementasi backend lanjutan.
+Pembayaran online sengaja dinonaktifkan sampai integrasi backend tersedia. Transaksi operasional, validasi transaksi pending saat tutup shift, pending/void, filter laporan periode, dan sinkronisasi data masih perlu implementasi backend lanjutan.
 
 Target utama desktop/laptop. Sidebar bisa disembunyikan pada layar sempit; tabel mempunyai scroll horizontal. Layout kasir membutuhkan ruang untuk katalog dan keranjang berdampingan.
 

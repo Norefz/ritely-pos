@@ -1,6 +1,7 @@
 import { state, money, total, uid, escape } from "../../demo.js";
 import { receipt } from "./common.js";
 import { ApiError, openShiftRequest } from "../../api.js";
+import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
 
 const productImages = {
   "Air mineral 600 ml":
@@ -24,6 +25,7 @@ const productImages = {
 /* ---------- Kasir (POS): konfigurasi & helper ---------- */
 // Filter dan nominal tunai bertahan saat refresh() membangun ulang halaman.
 const view = { q: "", category: "all", cash: "" };
+let scheduleTimer = null;
 const TONES = ["", "orange", "purple", "green"]; // warna avatar per urutan kategori
 
 const svg = (path) =>
@@ -41,6 +43,11 @@ const inCart = (id) =>
   state.cart.find((i) => String(i.id) === id)?.quantity || 0;
 const currentShift = () =>
   state.shift?.cashier_id === state.currentUser?.id ? state.shift : null;
+const shiftType = (shift) => shift?.shift_type || shift?.assigned_shift;
+const scheduleAvailability = () => {
+  const shift = currentShift();
+  return `${shift?.id || ""}:${shift ? canCloseShift(shiftType(shift)) : false}:${!state.shift && canOpenShift(state.currentUser?.assigned_shift)}`;
+};
 
 function initials(name) {
   const w = name.trim().split(/\s+/);
@@ -116,21 +123,26 @@ function shell() {
     !state.categories.some((c) => String(c.id) === view.category)
   )
     view.category = "all";
-  const open = !!currentShift();
+  const openShift = currentShift();
+  const open = !!openShift;
   const otherShift = !!state.shift && !open;
+  const shiftEnded = open && canCloseShift(shiftType(openShift));
+  const assignedShift = state.currentUser?.assigned_shift;
+  const openAllowed = !state.shift && canOpenShift(assignedShift);
+  const assignedWindow = shiftWindow(assignedShift);
   const since = open
     ? new Intl.DateTimeFormat("id-ID", {
         hour: "2-digit",
         minute: "2-digit",
         timeZone: "Asia/Jakarta",
-      }).format(new Date(state.shift.opened_at))
+      }).format(new Date(openShift.opened_at))
     : "";
   return `
     <div class="ps-wrap">
       <div class="ps-top">
         <label class="pd-search">${icons.search}<input type="search" placeholder="Cari produk atau scan barcode" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
-        <span class="ps-shift${open ? " on" : ""}"><span></span>${open ? `${escape(state.shift.assigned_shift.replace("_", " "))} · terbuka sejak ${since} WIB` : otherShift ? `Shift ${escape(state.shift.cashier)} sedang berjalan` : "Shift belum dibuka"}</span>
-        ${open || otherShift ? "" : `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`}
+        <span class="ps-shift${open && !shiftEnded ? " on" : ""}"><span></span>${open ? `${escape(shiftType(openShift).replace("_", " "))} · ${shiftEnded ? "waktu shift berakhir" : `terbuka sejak ${since} WIB`}` : otherShift ? `Shift ${escape(state.shift.cashier)} masih terbuka` : openAllowed ? "Shift belum dibuka" : `Jadwal ${assignedWindow?.label || "—"} WIB`}</span>
+        ${shiftEnded ? `<button type="button" class="sh-btn primary" data-act="manage-shift">Tutup shift</button>` : open || otherShift || !openAllowed ? "" : `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`}
       </div>
       <div class="ps-main">
         <section class="ps-catalog">
@@ -245,6 +257,10 @@ export function pos(refresh) {
       });
       return;
     }
+    if (canCloseShift(shiftType(currentShift()))) {
+      webix.message({ type: "error", text: "Jam shift berakhir. Tutup shift sebelum memulai transaksi baru." });
+      return;
+    }
     const p = findProduct(id),
       item = state.cart.find((i) => String(i.id) === id);
     if (!p?.active || (item?.quantity || 0) >= p.stock) {
@@ -272,6 +288,10 @@ export function pos(refresh) {
     paint(root);
   }
   async function openShift() {
+    if (!canOpenShift(state.currentUser?.assigned_shift)) {
+      webix.message({ type: "error", text: "Shift hanya dapat dibuka selama jam penugasan Anda." });
+      return;
+    }
     try {
       const result = await openShiftRequest();
       state.shift = result.shift;
@@ -299,6 +319,10 @@ export function pos(refresh) {
       });
       return;
     }
+    if (canCloseShift(shiftType(currentShift()))) {
+      webix.message({ type: "error", text: "Jam shift sudah berakhir. Transaksi baru tidak dapat dibuat." });
+      return;
+    }
     if (
       state.cart.some((i) => {
         const p = state.products.find((p) => p.id === i.id);
@@ -316,6 +340,10 @@ export function pos(refresh) {
         "Selesaikan penjualan simulasi ini? Tidak ada pembayaran sungguhan.",
       )
       .then(() => {
+        if (!currentShift() || canCloseShift(shiftType(currentShift()))) {
+          webix.message({ type: "error", text: "Shift sudah berakhir atau tidak lagi aktif. Transaksi baru tidak dapat dibuat." });
+          return;
+        }
         const sale = {
           id: "DEMO-" + uid().slice(0, 8),
           created_at: new Date().toISOString(),
@@ -346,6 +374,7 @@ export function pos(refresh) {
     inc: (root, id) => quantity(root, id, 1),
     dec: (root, id) => quantity(root, id, -1),
     open: openShift,
+    "manage-shift": () => { location.hash = "shifts"; },
     pay,
   };
   return {
@@ -359,6 +388,19 @@ export function pos(refresh) {
         applyFilter(root);
         paint(root);
         bind(root, actions);
+        if (scheduleTimer) clearInterval(scheduleTimer);
+        let previous = scheduleAvailability();
+        scheduleTimer = setInterval(() => {
+          const current = scheduleAvailability();
+          if (current !== previous) {
+            previous = current;
+            refresh();
+          }
+        }, 15000);
+      },
+      onDestruct() {
+        if (scheduleTimer) clearInterval(scheduleTimer);
+        scheduleTimer = null;
       },
     },
   };
