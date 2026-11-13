@@ -2079,41 +2079,22 @@ small {
   color: #71809a;
   font-size: 16px;
 }
-.ms-cashier {
+.ms-date {
   display: flex;
   align-items: center;
   gap: 12px;
   flex: 0 0 auto;
-  padding: 7px 18px 7px 8px;
+  padding: 12px 18px;
   border: 1px solid #dfe6f1;
-  border-radius: 16px;
+  border-radius: 999px;
   background: #fff;
+  color: #526175;
+  font-size: 15px;
+  font-weight: 600;
 }
-.ms-cashier img {
-  display: block;
-  width: 46px;
-  height: 46px;
-  flex: 0 0 46px;
-  border: 1px solid #dfe6f1;
-  border-radius: 50%;
-  background: #e0f2fe;
-  object-fit: cover;
-}
-.ms-cashier div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 3px;
-}
-.ms-cashier strong {
-  color: #15213b;
-  font-size: 14px;
-  line-height: 1.2;
-}
-.ms-cashier span {
-  color: #71809a;
-  font-size: 12px;
-  line-height: 1.2;
+.ms-date .pd-ico {
+  width: 18px;
+  height: 18px;
 }
 .ms-layout {
   display: grid;
@@ -2130,33 +2111,42 @@ small {
 }
 .ms-main {
   display: flex;
-  min-height: 430px;
+  min-height: 520px;
   flex-direction: column;
-  padding: 30px 32px 24px;
+  padding: 40px 44px 30px;
 }
 .ms-status {
   display: flex;
   align-items: center;
-  gap: 20px;
-  min-height: 84px;
+  gap: 32px;
+  min-height: 132px;
 }
-.ms-lock {
+.ms-profile-avatar {
+  position: relative;
   display: grid;
-  width: 84px;
-  height: 84px;
+  width: 128px;
+  height: 128px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 22px;
-  background: #eef2f8;
-  color: #526175;
+  border: 4px solid #82a6ff;
+  border-radius: 50%;
+  background: #dce7ff;
+  box-shadow: inset 0 0 0 4px #fff;
+  color: #2548b9;
+  font: 700 54px/1 Urbanist, sans-serif;
 }
-.ms-lock .pd-ico {
-  width: 30px;
-  height: 30px;
+.ms-profile-avatar i {
+  position: absolute;
+  right: 2px;
+  bottom: 5px;
+  width: 20px;
+  height: 20px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #9aa9bf;
 }
-.ms-status.is-open .ms-lock {
-  background: #e3f5eb;
-  color: #197344;
+.ms-status.is-open .ms-profile-avatar i {
+  background: #199255;
 }
 .ms-status-copy {
   min-width: 0;
@@ -2181,9 +2171,25 @@ small {
 }
 .ms-status-copy h2 {
   margin-top: 7px;
-  font-size: 29px;
+  font-size: 42px;
   letter-spacing: -0.025em;
   line-height: 1.12;
+}
+.ms-employee-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #f0f3f8;
+  color: #526175;
+  font-size: 15px;
+  font-weight: 700;
+}
+.ms-employee-id .pd-ico {
+  width: 16px;
+  height: 16px;
 }
 .ms-status-copy p {
   margin: 6px 0 0;
@@ -2195,10 +2201,10 @@ small {
   display: flex;
   align-items: center;
   gap: 16px;
-  min-height: 84px;
+  min-height: 110px;
   box-sizing: border-box;
-  margin-top: 24px;
-  padding: 12px 18px;
+  margin-top: 34px;
+  padding: 14px 22px;
   border: 1px solid #dfe6f1;
   border-radius: 16px;
 }
@@ -2257,12 +2263,12 @@ small {
   display: grid;
   grid-template-columns: 1.7fr 1fr;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 32px;
 }
 .ms-action {
   display: inline-flex;
   min-width: 0;
-  min-height: 64px;
+  min-height: 88px;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -2271,7 +2277,7 @@ small {
   border-radius: 16px;
   background: #fff;
   color: #2453dc;
-  font: 700 19px Urbanist, sans-serif;
+  font: 700 22px Urbanist, sans-serif;
   cursor: pointer;
 }
 .ms-action.primary {
@@ -2303,7 +2309,7 @@ small {
   align-items: center;
   gap: 10px;
   margin: auto 0 0;
-  padding-top: 28px;
+  padding-top: 34px;
   color: #71809a;
   font-size: 13px;
   line-height: 1.45;
@@ -2312,6 +2318,57 @@ small {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
+}
+.ms-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 38px;
+}
+.ms-step {
+  display: flex;
+  min-width: 0;
+  min-height: 92px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: #f3f6fa;
+  color: #17233b;
+}
+.ms-step > span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #e1e8f2;
+  color: #71809a;
+  font-size: 19px;
+  font-weight: 700;
+}
+.ms-step div {
+  min-width: 0;
+}
+.ms-step b,
+.ms-step small {
+  display: block;
+}
+.ms-step b {
+  font: 700 17px/1.25 Urbanist, sans-serif;
+}
+.ms-step small {
+  margin-top: 4px;
+  color: #71809a;
+  font-size: 14px;
+  line-height: 1.3;
+}
+.ms-step.active > span,
+.ms-step.complete > span {
+  background: #2453dc;
+  color: #fff;
 }
 .ms-aside {
   display: flex;
@@ -2457,7 +2514,7 @@ small {
     grid-template-columns: minmax(0, 1fr);
   }
   .ms-main {
-    min-height: 430px;
+    min-height: 520px;
   }
   .ms-aside {
     display: grid;
@@ -2483,15 +2540,9 @@ small {
   .ms-head p {
     font-size: 14px;
   }
-  .ms-cashier {
-    gap: 9px;
-    padding-right: 14px;
-    border-radius: 14px;
-  }
-  .ms-cashier img {
-    width: 40px;
-    height: 40px;
-    flex-basis: 40px;
+  .ms-date {
+    padding: 9px 14px;
+    font-size: 13px;
   }
   .ms-layout {
     gap: 16px;
@@ -2505,29 +2556,35 @@ small {
     flex-wrap: wrap;
     gap: 16px;
   }
+  .ms-profile-avatar {
+    width: 76px;
+    height: 76px;
+    border-width: 3px;
+    font-size: 34px;
+  }
+  .ms-profile-avatar i {
+    right: 0;
+    bottom: 1px;
+    width: 16px;
+    height: 16px;
+    border-width: 3px;
+  }
   .ms-status-copy {
-    flex: 1 1 calc(100% - 84px);
-  }
-  .ms-status .ms-cashier {
-    margin-left: 84px;
-  }
-  .ms-lock {
-    width: 68px;
-    height: 68px;
-    border-radius: 20px;
-  }
-  .ms-lock .pd-ico {
-    width: 28px;
-    height: 28px;
+    flex: 1 1 calc(100% - 92px);
   }
   .ms-kicker {
     font-size: 11px;
   }
   .ms-status-copy h2 {
-    font-size: 25px;
+    font-size: 30px;
   }
   .ms-status-copy p {
     font-size: 14px;
+  }
+  .ms-employee-id {
+    margin-top: 10px;
+    padding: 7px 11px;
+    font-size: 13px;
   }
   .ms-schedule {
     flex-wrap: wrap;
@@ -2559,9 +2616,30 @@ small {
     margin-top: 22px;
   }
   .ms-action {
-    min-height: 58px;
+    min-height: 62px;
     border-radius: 14px;
-    font-size: 18px;
+    font-size: 19px;
+  }
+  .ms-steps {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .ms-step {
+    min-height: 68px;
+    padding: 10px 14px;
+    border-radius: 14px;
+  }
+  .ms-step > span {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+  .ms-step b {
+    font-size: 15px;
+  }
+  .ms-step small {
+    font-size: 12px;
   }
   .ms-note {
     margin-top: 0;

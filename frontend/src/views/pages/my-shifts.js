@@ -1,16 +1,12 @@
 import { state, money, escape } from "../../demo.js";
 import { ApiError, closeShiftRequest, openShiftRequest } from "../../api.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
-import { cashierAvatarSrc } from "../cashier-avatar.js";
 
 let scheduleTimer = null;
 
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 const icons = {
-  lock: svg(
-    '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
-  ),
   play: svg('<circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z"/>'),
   sun: svg(
     '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -19,6 +15,8 @@ const icons = {
     '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
   ),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
+  calendar: svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>'),
+  employee: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.7-1.3 1.7-2 3-2s2.3.7 3 2M14 10h4M14 14h4"/>'),
 };
 
 const SCHEDULE = {
@@ -79,6 +77,16 @@ function localTime(value) {
     .replace(":", ".");
 }
 
+function todayLabel() {
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+}
+
 function todayShifts() {
   const all = [...shiftsForMe()];
   const open = myOpenShift();
@@ -135,41 +143,27 @@ function scheduleHtml() {
   </div>`;
 }
 
-function cashierIdentityHtml() {
-  const profile = cashier();
-  const name = escape(profile?.name || "Kasir");
-  const employeeId = escape(profile?.employee_id || "Belum ada");
-  return `<div class="ms-cashier">
-    <img src="${cashierAvatarSrc(profile)}" alt="Foto profil ${name}" />
-    <div><strong>${name}</strong><span>${employeeId}</span></div>
-  </div>`;
-}
-
 function statusHtml() {
   const openShift = myOpenShift();
   const otherShiftOpen = !openShift && !!state.shift;
   const assignedShift = cashier()?.assigned_shift;
-  const assignedWindow = shiftWindow(assignedShift);
   const closeAllowed = !!openShift && canCloseShift(openShift.shift_type || openShift.assigned_shift);
   const openAllowed = !state.shift && canOpenShift(assignedShift);
 
   const kicker = openShift
     ? "SHIFT SEDANG BERJALAN"
     : otherShiftOpen
-      ? "TOKO SEDANG BEROPERASI"
+      ? "SHIFT KASIR LAIN BERJALAN"
       : "SHIFT BELUM DIBUKA";
-  const title = openShift
-    ? "Shift Anda sedang berjalan"
-    : otherShiftOpen
-      ? "Tunggu shift sebelumnya selesai"
-      : "Siap mulai bekerja?";
-  const description = openShift
+  const profileName = cashier()?.name || "Kasir";
+  const name = escape(profileName);
+  const initial = escape(profileName.trim().charAt(0).toUpperCase() || "K");
+  const employeeId = escape(cashier()?.employee_id || "Belum ada");
+  const identityNote = openShift
     ? `${escape(SCHEDULE[openShift.shift_type || openShift.assigned_shift]?.name || "Shift Anda")} · Dibuka pukul ${localTime(openShift.opened_at)} WIB.`
     : otherShiftOpen
-      ? `${escape(state.shift.cashier || "Kasir lain")} masih memiliki shift terbuka. Anda bisa mulai setelah shift itu ditutup.`
-      : openAllowed
-        ? "Waktu penugasan Anda sedang berlangsung. Buka shift untuk mulai berjualan di Kasir."
-        : `Jadwal Anda ${assignedWindow?.label || "belum ditetapkan"} WIB. Shift hanya dapat dibuka pada rentang waktu tersebut.`;
+      ? `${escape(state.shift.cashier || "Kasir lain")} masih memiliki shift terbuka.`
+      : "";
   const note = openShift
     ? closeAllowed
       ? "Pastikan transaksi sudah selesai sebelum menutup shift."
@@ -177,21 +171,36 @@ function statusHtml() {
     : otherShiftOpen
       ? "Shift hanya dapat dibuka setelah shift yang sedang berjalan ditutup."
       : "Waktu pembukaan dan penutupan shift akan dicatat otomatis ke database.";
+  const activeStep = openShift ? (closeAllowed ? 3 : 2) : 1;
+  const steps = [
+    ["Buka shift", "Mulai sesi kerja Anda"],
+    ["Layani transaksi", "Gunakan menu Kasir"],
+    ["Tutup shift", "Saat jam kerja selesai"],
+  ];
 
   return `
     <div class="ms-status${openShift ? " is-open" : ""}">
-      <i class="ms-lock">${openShift ? icons.play : icons.lock}</i>
+      <div class="ms-profile-avatar" aria-hidden="true"><span>${initial}</span><i></i></div>
       <div class="ms-status-copy">
         <span class="ms-kicker"><i></i>${kicker}</span>
-        <h2>${title}</h2>
-        <p>${description}</p>
+        <h2>${name}</h2>
+        <span class="ms-employee-id">${icons.employee}ID ${employeeId}</span>
+        ${identityNote ? `<p>${identityNote}</p>` : ""}
       </div>
-      ${cashierIdentityHtml()}
     </div>
     ${scheduleHtml()}
     <div class="ms-actions">
       <button type="button" class="ms-action primary" data-act="open"${openAllowed ? "" : " disabled"}>${icons.play}Buka shift</button>
       <button type="button" class="ms-action secondary" data-act="close"${closeAllowed ? "" : " disabled"}>Tutup shift</button>
+    </div>
+    <div class="ms-steps" aria-label="Langkah kerja dalam shift">
+      ${steps.map(([title, description], index) => {
+        const number = index + 1;
+        const stepState = number === activeStep ? "active" : number < activeStep ? "complete" : "";
+        return `<div class="ms-step ${stepState}"${number === activeStep ? ' aria-current="step"' : ""}>
+          <span>${number}</span><div><b>${title}</b><small>${description}</small></div>
+        </div>`;
+      }).join("")}
     </div>
     <p class="ms-note">${icons.info}${note}</p>`;
 }
@@ -220,6 +229,7 @@ function shell() {
   return `
     <div class="ms-head">
       <div><h1>Shift saya</h1><p>Buka shift untuk mulai berjualan, tutup shift saat selesai bekerja.</p></div>
+      <span class="ms-date">${icons.calendar}${todayLabel()}</span>
     </div>
     <div class="ms-layout">
       <section class="ms-main">${statusHtml()}</section>
