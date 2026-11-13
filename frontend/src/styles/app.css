@@ -1478,6 +1478,20 @@ small {
   margin: 6px 0 0;
   color: var(--muted);
 }
+.stock-page .stock-section-head {
+  align-items: center;
+  padding: 18px 24px 12px;
+}
+.stock-page .stock-section-head h2 {
+  font-size: 19px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.stock-page .stock-section-head p {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.45;
+}
 .pd-add {
   display: inline-flex;
   align-items: center;

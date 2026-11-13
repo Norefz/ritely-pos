@@ -198,7 +198,7 @@ function shell() {
       <div class="pd-chips" data-part="chips" role="group" aria-label="Filter status stok">${chipsHtml()}</div>
     </section>
     <section class="pd-card">
-      <div class="pd-head"><div><h2>Persediaan produk</h2><p>Jumlah saat ini dibandingkan dengan batas minimum.</p></div></div>
+      <div class="pd-head stock-section-head"><div><h2>Persediaan produk</h2><p>Jumlah saat ini dibandingkan dengan batas minimum.</p></div></div>
       <div class="pd-scroll">
         <table class="pd-table">
           <thead><tr>
@@ -212,7 +212,7 @@ function shell() {
       <div class="pd-foot" data-part="foot"></div>
     </section>
     <section class="pd-card">
-      <div class="pd-head"><div><h2>Riwayat stock opname</h2><p>Hitungan fisik langsung menyesuaikan stok dan tercatat di sini.</p></div></div>
+      <div class="pd-head stock-section-head"><div><h2>Riwayat stock opname</h2><p>Hitungan fisik langsung menyesuaikan stok dan tercatat di sini.</p></div></div>
       <div class="pd-scroll"><table class="pd-table so-table">
         <thead><tr><th>Produk</th><th>Petugas</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th><th>Waktu</th></tr></thead>
         <tbody>${opnameRows}</tbody>
