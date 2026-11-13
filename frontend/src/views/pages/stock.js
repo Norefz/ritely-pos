@@ -1,6 +1,10 @@
-import { state, categoryName, escape } from "../../demo.js";
+import { state, categoryName, date, escape } from "../../demo.js";
 import { editor } from "./common.js";
-import { ApiError, adjustStockRequest } from "../../api.js";
+import {
+  ApiError,
+  adjustStockRequest,
+  submitStockOpnameRequest,
+} from "../../api.js";
 
 /* ---------- Halaman Persediaan: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -18,6 +22,7 @@ const icons = {
   prev: svg('<path d="m15 6-6 6 6 6"/>'),
   next: svg('<path d="m9 6 6 6-6 6"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
 };
 
 // Stok menipis = di bawah batas minimum (FR-24) atau habis.
@@ -95,6 +100,9 @@ function levelHtml(p) {
     <div class="sk-bar${lowStock(p) ? " low" : ""}"><i style="width:${fill.toFixed(0)}%"></i>${p.minimum > 0 ? `<u style="left:${mark.toFixed(0)}%"></u>` : ""}</div></div>`;
 }
 function rowHtml(p) {
+  const managerAction = state.role === "manager"
+    ? `<td class="pd-act"><button type="button" class="pd-edit" data-act="adjust" data-id="${escape(String(p.id))}" aria-label="Sesuaikan stok ${escape(p.name)}">${icons.pencil}Sesuaikan stok</button></td>`
+    : "";
   return `<tr>
     <td><div class="pd-name"><i class="pd-av ${tone(p.category)}">${escape(initials(p.name))}</i>
       <div class="sk-prod"><b>${escape(p.name)}</b><small>${escape(p.sku)}</small></div></div></td>
@@ -102,13 +110,14 @@ function rowHtml(p) {
     <td>${levelHtml(p)}</td>
     <td class="pd-r sk-min">${p.minimum}</td>
     <td>${stockTag(p)}</td>
-    <td class="pd-act"><button type="button" class="pd-edit" data-act="adjust" data-id="${escape(String(p.id))}" aria-label="Sesuaikan stok ${escape(p.name)}">${icons.pencil}Sesuaikan stok</button></td>
+    ${managerAction}
   </tr>`;
 }
 function listHtml(rows) {
+  const columns = state.role === "manager" ? 6 : 5;
   return rows.length
     ? rows.map(rowHtml).join("")
-    : `<tr><td colspan="6" class="pd-empty">Tidak ada produk yang cocok dengan pencarian atau filter ini.</td></tr>`;
+    : `<tr><td colspan="${columns}" class="pd-empty">Tidak ada produk yang cocok dengan pencarian atau filter ini.</td></tr>`;
 }
 function footHtml(total, pages, from, to) {
   const text = total
@@ -132,9 +141,25 @@ function footHtml(total, pages, from, to) {
 }
 
 function shell() {
+  const isManager = state.role === "manager";
+  const opnameRows = state.stockOpnames.length
+    ? state.stockOpnames.map((opname) => {
+        const difference = Number(opname.difference || 0);
+        const delta = difference > 0 ? `+${difference}` : String(difference);
+        return `<tr>
+          <td><div class="so-product"><b>${escape(opname.product_name)}</b><small>${escape(opname.sku)}</small></div></td>
+          <td>${escape(opname.submitted_by_name)}</td>
+          <td>${opname.system_stock}</td>
+          <td>${opname.counted_stock}</td>
+          <td><b class="so-difference${difference < 0 ? " negative" : difference > 0 ? " positive" : ""}">${delta}</b></td>
+          <td>${escape(date(opname.submitted_at))}${opname.note ? `<small class="so-note">Catatan: ${escape(opname.note)}</small>` : ""}</td>
+        </tr>`;
+      }).join("")
+    : `<tr><td class="pd-empty" colspan="6">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
   return `
     <div class="pd-head">
-      <div><h1>Persediaan</h1><p>Catat penyesuaian stok dengan alasan yang dapat ditelusuri.</p></div>
+      <div><h1>Stok</h1><p>${isManager ? "Pantau persediaan dan sesuaikan jumlah stok." : "Lihat persediaan dan catat hasil hitung fisik."}</p></div>
+      ${isManager ? "" : `<button type="button" class="pd-add" data-act="opname">${icons.plus}Catat stock opname</button>`}
       <div data-part="pill">${pillHtml()}</div>
     </div>
     <section class="pd-card pd-stats" data-part="stats">${statsHtml()}</section>
@@ -143,17 +168,25 @@ function shell() {
       <div class="pd-chips" data-part="chips" role="group" aria-label="Filter status stok">${chipsHtml()}</div>
     </section>
     <section class="pd-card">
+      <div class="pd-head"><div><h2>Persediaan produk</h2><p>Jumlah saat ini dibandingkan dengan batas minimum.</p></div></div>
       <div class="pd-scroll">
         <table class="pd-table">
           <thead><tr>
             <th>Produk</th><th class="sk-c-cat">Kategori</th><th class="sk-c-lvl">Stok tersedia</th>
             <th class="sk-c-min pd-r">Minimum</th><th class="sk-c-status">Status</th>
-            <th class="sk-c-act"><span class="pd-sr">Aksi</span></th>
+            ${isManager ? '<th class="sk-c-act"><span class="pd-sr">Aksi</span></th>' : ""}
           </tr></thead>
           <tbody data-part="list"></tbody>
         </table>
       </div>
       <div class="pd-foot" data-part="foot"></div>
+    </section>
+    <section class="pd-card">
+      <div class="pd-head"><div><h2>Riwayat stock opname</h2><p>Hitungan fisik langsung menyesuaikan stok dan tercatat di sini.</p></div></div>
+      <div class="pd-scroll"><table class="pd-table so-table">
+        <thead><tr><th>Produk</th><th>Petugas</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th><th>Waktu</th></tr></thead>
+        <tbody>${opnameRows}</tbody>
+      </table></div>
     </section>
     <p class="pd-note">${icons.info}Garis penanda pada bar menunjukkan batas stok minimum.</p>`;
 }
@@ -176,13 +209,82 @@ function paint(root) {
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));
 }
 
-function bind(root, adjust) {
+function submitOpname(refresh) {
+  const products = state.products.filter((product) => product.active);
+  if (!products.length) {
+    webix.message({ type: "error", text: "Belum ada produk aktif di database." });
+    return;
+  }
+  editor(
+    "Catat hasil stock opname",
+    [
+      {
+        view: "richselect",
+        name: "product_id",
+        label: "Produk",
+        options: products.map((product) => ({
+          id: product.id,
+          value: `${product.name} · ${product.sku} · Sistem: ${product.stock}`,
+        })),
+        required: true,
+      },
+      {
+        view: "text",
+        name: "counted_stock",
+        label: "Jumlah fisik yang dihitung",
+        type: "number",
+        required: true,
+      },
+      { view: "textarea", name: "note", label: "Catatan (opsional)" },
+    ],
+    { product_id: products[0].id, counted_stock: "" },
+    async (values) => {
+      const counted = Number(values.counted_stock);
+      if (!Number.isInteger(counted) || counted < 0) {
+        webix.message({ type: "error", text: "Jumlah fisik harus bilangan bulat ≥ 0." });
+        return false;
+      }
+      try {
+        const result = await submitStockOpnameRequest({
+          product_id: values.product_id,
+          counted_stock: counted,
+          note: values.note || "",
+        });
+        state.stockOpnames.unshift(result.opname);
+        const product = state.products.find(
+          (item) => item.id === result.opname.product_id,
+        );
+        if (product) product.stock = result.opname.counted_stock;
+        refresh();
+        webix.message("Stock opname tersimpan dan stok langsung disesuaikan.");
+      } catch (error) {
+        const message = !(error instanceof ApiError)
+          ? "Stock opname gagal disimpan. Periksa koneksi backend."
+          : error.code === "database_unavailable"
+            ? "Database belum dapat dijangkau. Stok belum diubah."
+            : error.code === "stock_changed_retry"
+              ? "Stok berubah saat opname. Muat ulang halaman lalu hitung kembali."
+              : error.code === "product_not_found"
+                ? "Produk tidak aktif atau sudah tidak tersedia. Muat ulang halaman."
+                : error.status === 0
+                  ? "Backend tidak dapat dijangkau. Periksa koneksi lalu coba lagi."
+                  : error.message || "Stock opname gagal disimpan.";
+        webix.message({ type: "error", text: message });
+        return false;
+      }
+    },
+  );
+}
+
+function bind(root, adjust, refresh) {
   if (root._skBound) return;
   root._skBound = true;
   root.addEventListener("click", (e) => {
     const el = e.target.closest("[data-act]");
     if (!el || el.disabled) return;
     const act = el.dataset.act;
+    if (act === "opname" && state.role === "cashier")
+      return submitOpname(refresh);
     if (act === "adjust")
       return adjust(state.products.find((p) => String(p.id) === el.dataset.id));
     if (act === "status") {
@@ -259,7 +361,7 @@ export function stock(refresh) {
     on: {
       onAfterRender() {
         paint(this.$view);
-        bind(this.$view, adjust);
+        bind(this.$view, adjust, refresh);
       },
     },
   };

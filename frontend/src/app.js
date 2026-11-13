@@ -4,7 +4,6 @@ import { navbar } from "./views/layout/navbar.js";
 import { dashboard } from "./views/pages/dashboard.js";
 import { products, categories } from "./views/pages/product.js";
 import { stock } from "./views/pages/stock.js";
-import { stockOpnames } from "./views/pages/stock-opnames.js";
 import { pos } from "./views/pages/pos.js";
 import { transactions } from "./views/pages/transactions.js";
 import { shifts } from "./views/pages/shifts.js";
@@ -31,7 +30,6 @@ const factories = {
   products: () => products(refresh),
   categories: () => categories(refresh),
   stock: () => stock(refresh),
-  "stock-opnames": () => stockOpnames(refresh),
   pos: () => pos(refresh),
   transactions,
   shifts: () =>
