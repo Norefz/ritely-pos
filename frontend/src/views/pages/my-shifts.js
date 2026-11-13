@@ -172,13 +172,6 @@ function statusHtml() {
     : otherShiftOpen
       ? "Shift hanya dapat dibuka setelah shift yang sedang berjalan ditutup."
       : "Waktu pembukaan dan penutupan shift akan dicatat otomatis ke database.";
-  const activeStep = openShift ? (closeAllowed ? 3 : 2) : 1;
-  const steps = [
-    ["Buka shift", "Mulai sesi kerja Anda"],
-    ["Layani transaksi", "Gunakan menu Kasir"],
-    ["Tutup shift", "Saat jam kerja selesai"],
-  ];
-
   return `
     <div class="ms-status${openShift ? " is-open" : ""}">
       <div class="ms-profile-avatar" role="img" aria-label="Foto profil ${name}"><img src="${avatar}" alt=""><i></i></div>
@@ -193,15 +186,6 @@ function statusHtml() {
     <div class="ms-actions">
       <button type="button" class="ms-action primary" data-act="open"${openAllowed ? "" : " disabled"}>${icons.play}Buka shift</button>
       <button type="button" class="ms-action secondary" data-act="close"${closeAllowed ? "" : " disabled"}>Tutup shift</button>
-    </div>
-    <div class="ms-steps" aria-label="Langkah kerja dalam shift">
-      ${steps.map(([title, description], index) => {
-        const number = index + 1;
-        const stepState = number === activeStep ? "active" : number < activeStep ? "complete" : "";
-        return `<div class="ms-step ${stepState}"${number === activeStep ? ' aria-current="step"' : ""}>
-          <span>${number}</span><div><b>${title}</b><small>${description}</small></div>
-        </div>`;
-      }).join("")}
     </div>
     <p class="ms-note">${icons.info}${note}</p>`;
 }
