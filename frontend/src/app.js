@@ -133,9 +133,11 @@ function mountLogin() {
       login(async (user) => {
         state.currentUser = user;
         state.role = user.role;
-        await hydrateShifts();
-        await hydrateCatalog();
-        await hydrateStockOpnames();
+        await Promise.all([
+          hydrateShifts(),
+          hydrateCatalog(),
+          hydrateStockOpnames(),
+        ]);
         $$("loginScreen").destructor();
         mountApplication();
       }),

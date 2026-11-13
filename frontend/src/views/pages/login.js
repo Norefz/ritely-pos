@@ -96,7 +96,7 @@ function bind(root, onSuccess) {
     showError(root, "");
     try {
       const user = await loginRequest(username, password);
-      onSuccess(user);
+      await onSuccess(user);
     } catch (error) {
       const message =
         error instanceof ApiError && error.status === 401
