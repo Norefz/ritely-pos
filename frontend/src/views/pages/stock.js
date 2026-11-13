@@ -160,7 +160,7 @@ function shell() {
       : `<tr><td class="pd-empty" colspan="7">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
     return `
       <div class="pd-head">
-        <div><h1>Stock opname</h1><p>Catat jumlah fisik barang untuk langsung menyesuaikan stok sistem.</p></div>
+        <div><h1>Stok</h1><p>Catat jumlah fisik barang untuk langsung menyesuaikan stok sistem.</p></div>
         <button type="button" class="pd-add" data-act="opname">${icons.plus}Catat hasil hitung</button>
       </div>
       <section class="pd-card so-intro">${icons.info}<div><b>Penyesuaian langsung</b><p>Pastikan hitungan fisik benar. Setelah disimpan, stok sistem langsung berubah dan hasilnya masuk ke riwayat.</p></div></section>
