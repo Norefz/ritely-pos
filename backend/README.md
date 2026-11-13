@@ -20,12 +20,13 @@ diabaikan Git; gunakan `.env.example` sebagai daftar variabel konfigurasi. Isi
 `CORS_ALLOWED_ORIGINS` membatasi origin frontend (default untuk server lokal
 port 8080). Jangan kirim token melalui koneksi HTTP di luar lingkungan development.
 
-Pasang dependensi dan jalankan aplikasi dari folder ini. Server Flask menyajikan
-frontend dan API sekaligus, jadi cukup jalankan satu proses:
+Pasang dependensi dan jalankan aplikasi dari root repository. Satu `main.py` di
+root memuat aplikasi backend dan menyajikan frontend serta API sekaligus:
 
 ```sh
-pip install -r requirements.txt
-python main.py
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r requirements.txt
+backend/.venv/bin/python main.py
 ```
 
 Buka `http://127.0.0.1:5000/` untuk frontend. Periksa koneksi database
