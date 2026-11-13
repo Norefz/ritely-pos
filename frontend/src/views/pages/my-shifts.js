@@ -135,6 +135,16 @@ function scheduleHtml() {
   </div>`;
 }
 
+function cashierIdentityHtml() {
+  const profile = cashier();
+  const name = escape(profile?.name || "Kasir");
+  const employeeId = escape(profile?.employee_id || "Belum ada");
+  return `<div class="ms-cashier">
+    <img src="${cashierAvatarSrc(profile)}" alt="Foto profil ${name}" />
+    <div><strong>${name}</strong><span>${employeeId}</span></div>
+  </div>`;
+}
+
 function statusHtml() {
   const openShift = myOpenShift();
   const otherShiftOpen = !openShift && !!state.shift;
@@ -176,6 +186,7 @@ function statusHtml() {
         <h2>${title}</h2>
         <p>${description}</p>
       </div>
+      ${cashierIdentityHtml()}
     </div>
     ${scheduleHtml()}
     <div class="ms-actions">
@@ -206,16 +217,9 @@ function historyHtml() {
 }
 
 function shell() {
-  const profile = cashier();
-  const name = escape(profile?.name || "Kasir");
-  const employeeId = escape(profile?.employee_id || "Belum ada");
   return `
     <div class="ms-head">
       <div><h1>Shift saya</h1><p>Buka shift untuk mulai berjualan, tutup shift saat selesai bekerja.</p></div>
-      <div class="ms-cashier">
-        <img src="${cashierAvatarSrc(profile)}" alt="Foto profil ${name}" />
-        <div><strong>${name}</strong><span>${employeeId}</span></div>
-      </div>
     </div>
     <div class="ms-layout">
       <section class="ms-main">${statusHtml()}</section>
