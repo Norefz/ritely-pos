@@ -79,6 +79,8 @@ function logout() {
   finishLogout();
 }
 function mountApplication() {
+  const defaultRoute = state.role === "cashier" ? "shifts" : "dashboard";
+  current = defaultRoute;
   document.getElementById("app").replaceChildren();
   webix.ui({
     container: "app",
@@ -104,7 +106,7 @@ function mountApplication() {
   navigate(
     menus[state.role].some(([id]) => id === location.hash.slice(1))
       ? location.hash.slice(1)
-      : "dashboard",
+      : defaultRoute,
   );
   if (shiftSyncTimer) clearInterval(shiftSyncTimer);
   shiftSyncTimer = setInterval(syncShiftSnapshot, 15000);
