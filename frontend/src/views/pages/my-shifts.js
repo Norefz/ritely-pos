@@ -1,6 +1,7 @@
 import { state, money, escape } from "../../demo.js";
 import { ApiError, closeShiftRequest, openShiftRequest } from "../../api.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
+import { cashierAvatarSrc } from "../cashier-avatar.js";
 
 let scheduleTimer = null;
 
@@ -157,7 +158,7 @@ function statusHtml() {
       : "SHIFT BELUM DIBUKA";
   const profileName = cashier()?.name || "Kasir";
   const name = escape(profileName);
-  const initial = escape(profileName.trim().charAt(0).toUpperCase() || "K");
+  const avatar = cashierAvatarSrc(cashier());
   const employeeId = escape(cashier()?.employee_id || "Belum ada");
   const identityNote = openShift
     ? `${escape(SCHEDULE[openShift.shift_type || openShift.assigned_shift]?.name || "Shift Anda")} · Dibuka pukul ${localTime(openShift.opened_at)} WIB.`
@@ -180,7 +181,7 @@ function statusHtml() {
 
   return `
     <div class="ms-status${openShift ? " is-open" : ""}">
-      <div class="ms-profile-avatar" aria-hidden="true"><span>${initial}</span><i></i></div>
+      <div class="ms-profile-avatar" role="img" aria-label="Foto profil ${name}"><img src="${avatar}" alt=""><i></i></div>
       <div class="ms-status-copy">
         <span class="ms-kicker"><i></i>${kicker}</span>
         <h2>${name}</h2>
