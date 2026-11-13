@@ -92,12 +92,11 @@ function mountApplication() {
           navbar(state.role, logout),
           {
             view: "template",
+            id: "dataStatus",
             height: 42,
             css: "demo-banner",
             borderless: true,
-            template: state.catalogLoadError
-              ? "Katalog gagal dimuat dari backend · Periksa koneksi, lalu muat ulang halaman."
-              : "Katalog, shift, dan stock opname terhubung ke backend · Transaksi POS masih simulasi.",
+            template: "Memuat katalog, shift, dan stock opname…",
           },
           { view: "layout", id: "contentHost", rows: [] },
         ],
@@ -130,16 +129,13 @@ function mountLogin() {
     container: "app",
     id: "loginScreen",
     rows: [
-      login(async (user) => {
+      login((user) => {
         state.currentUser = user;
         state.role = user.role;
-        await Promise.all([
-          hydrateShifts(),
-          hydrateCatalog(),
-          hydrateStockOpnames(),
-        ]);
+        clearOperationalData();
         $$("loginScreen").destructor();
         mountApplication();
+        void hydrateApplicationData();
       }),
     ],
   });
@@ -191,6 +187,34 @@ async function hydrateStockOpnames() {
     state.stockOpnames = [];
     state.stockOpnameLoadError = true;
   }
+}
+
+function clearOperationalData() {
+  state.shift = null;
+  state.shifts = [];
+  state.categories = [];
+  state.products = [];
+  state.stockOpnames = [];
+}
+
+async function hydrateApplicationData() {
+  await Promise.all([
+    hydrateShifts(),
+    hydrateCatalog(),
+    hydrateStockOpnames(),
+  ]);
+
+  const status = $$("dataStatus");
+  if (status) {
+    status.define(
+      "template",
+      state.catalogLoadError
+        ? "Katalog gagal dimuat dari backend · Periksa koneksi, lalu muat ulang halaman."
+        : "Katalog, shift, dan stock opname terhubung ke backend · Transaksi POS masih simulasi.",
+    );
+    status.refresh();
+  }
+  if ($$("contentHost")) refresh();
 }
 
 async function syncShiftSnapshot() {
@@ -259,9 +283,9 @@ async function initializeApp() {
     const user = await currentUserRequest();
     state.currentUser = user;
     state.role = user.role;
-    await hydrateShifts();
-    await Promise.all([hydrateCatalog(), hydrateStockOpnames()]);
+    clearOperationalData();
     mountApplication();
+    void hydrateApplicationData();
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       clearAccessToken();

@@ -6,6 +6,7 @@ import sys
 from pymongo.errors import PyMongoError
 
 from app.config import Config
+from app.database.indexes import ensure_indexes
 from app.database.mongo import get_database
 from app.services.user_service import DuplicateUsernameError, create_user
 
@@ -30,8 +31,8 @@ def main():
             Config.MONGO_DB_NAME,
             Config.MONGO_SERVER_SELECTION_TIMEOUT_MS,
         )
+        ensure_indexes(database)
         users = database["users"]
-        users.create_index("username", unique=True, name="uq_users_username")
         existing = users.find_one({"username": username})
         if existing:
             if existing.get("role") != "manager":

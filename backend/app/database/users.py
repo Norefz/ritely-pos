@@ -11,12 +11,4 @@ def get_users_collection():
         current_app.config["MONGO_DB_NAME"],
         current_app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"],
     )
-    collection = database["users"]
-    collection.create_index("username", unique=True, name="uq_users_username")
-    collection.create_index(
-        "employee_id",
-        unique=True,
-        sparse=True,
-        name="uq_users_employee_id",
-    )
-    return collection
+    return database["users"]

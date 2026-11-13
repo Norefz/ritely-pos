@@ -53,9 +53,10 @@ python -m app.database.seeders.employee_ids
 
 Atur `INITIAL_MANAGER_NAME`, `INITIAL_MANAGER_USERNAME`, dan
 `INITIAL_MANAGER_PASSWORD` di `backend/.env`, lalu jalankan dari folder `backend`
-untuk membuat akun Manajer pertama. Seeder idempotent dan tidak mengubah akun yang
-sudah ada. Pembuatan dan perubahan akun Kasir beserta catatan `audit_logs`
-memerlukan MongoDB replica set agar transaksi berjalan atomik:
+untuk membuat akun Manajer pertama sekaligus menyiapkan index database. Seeder
+idempotent dan tidak mengubah akun yang sudah ada. Pembuatan index dilakukan saat
+setup ini, bukan setiap request. Pembuatan dan perubahan akun Kasir beserta
+catatan `audit_logs` memerlukan MongoDB replica set agar transaksi berjalan atomik:
 
 ```sh
 python -m app.database.seeders.initial
