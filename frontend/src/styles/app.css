@@ -2103,29 +2103,29 @@ small {
 }
 .ms-main {
   display: flex;
-  min-height: 590px;
+  min-height: 430px;
   flex-direction: column;
-  padding: 42px 44px 30px;
+  padding: 30px 32px 24px;
 }
 .ms-status {
   display: flex;
   align-items: center;
-  gap: 28px;
-  min-height: 112px;
+  gap: 20px;
+  min-height: 84px;
 }
 .ms-lock {
   display: grid;
-  width: 112px;
-  height: 112px;
+  width: 84px;
+  height: 84px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 28px;
+  border-radius: 22px;
   background: #eef2f8;
   color: #526175;
 }
 .ms-lock .pd-ico {
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
 }
 .ms-status.is-open .ms-lock {
   background: #e3f5eb;
@@ -2154,34 +2154,34 @@ small {
 }
 .ms-status-copy h2 {
   margin-top: 7px;
-  font-size: 34px;
+  font-size: 29px;
   letter-spacing: -0.025em;
   line-height: 1.12;
 }
 .ms-status-copy p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: #71809a;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.45;
 }
 .ms-schedule {
   display: flex;
   align-items: center;
-  gap: 20px;
-  min-height: 110px;
+  gap: 16px;
+  min-height: 84px;
   box-sizing: border-box;
-  margin-top: 34px;
-  padding: 18px 24px;
+  margin-top: 24px;
+  padding: 12px 18px;
   border: 1px solid #dfe6f1;
-  border-radius: 18px;
+  border-radius: 16px;
 }
 .ms-schedule-icon {
   display: grid;
-  width: 68px;
-  height: 68px;
+  width: 56px;
+  height: 56px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 18px;
+  border-radius: 15px;
   background: #fff0d0;
   color: #a65300;
 }
@@ -2190,8 +2190,8 @@ small {
   color: #2453c9;
 }
 .ms-schedule-icon .pd-ico {
-  width: 30px;
-  height: 30px;
+  width: 25px;
+  height: 25px;
 }
 .ms-schedule > div {
   min-width: 0;
@@ -2199,21 +2199,21 @@ small {
 }
 .ms-schedule b {
   display: block;
-  font: 700 23px/1.2 Urbanist, sans-serif;
+  font: 700 20px/1.2 Urbanist, sans-serif;
 }
 .ms-schedule span {
   display: block;
   margin-top: 4px;
   color: #71809a;
-  font-size: 16px;
+  font-size: 14px;
 }
 .ms-schedule em {
   flex: 0 0 auto;
-  padding: 10px 18px;
+  padding: 8px 14px;
   border-radius: 999px;
   background: #eef2f8;
   color: #64748b;
-  font-size: 14px;
+  font-size: 12px;
   font-style: normal;
   font-weight: 600;
 }
@@ -2229,22 +2229,22 @@ small {
 .ms-actions {
   display: grid;
   grid-template-columns: 1.7fr 1fr;
-  gap: 16px;
-  margin-top: 34px;
+  gap: 12px;
+  margin-top: 24px;
 }
 .ms-action {
   display: inline-flex;
   min-width: 0;
-  min-height: 88px;
+  min-height: 64px;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 14px 20px;
+  padding: 12px 18px;
   border: 1px solid #dfe6f1;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #fff;
   color: #2453dc;
-  font: 700 22px Urbanist, sans-serif;
+  font: 700 19px Urbanist, sans-serif;
   cursor: pointer;
 }
 .ms-action.primary {
@@ -2276,9 +2276,9 @@ small {
   align-items: center;
   gap: 10px;
   margin: auto 0 0;
-  padding-top: 46px;
+  padding-top: 28px;
   color: #71809a;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.45;
 }
 .ms-note .pd-ico {
@@ -2290,16 +2290,16 @@ small {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 .ms-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 .ms-stat {
   min-width: 0;
-  padding: 24px 24px 20px;
+  padding: 18px 18px 16px;
 }
 .ms-stat span {
   display: block;
@@ -2311,7 +2311,7 @@ small {
 }
 .ms-stat strong {
   display: block;
-  margin-top: 12px;
+  margin-top: 9px;
   overflow: hidden;
   font: 700 clamp(22px, 2vw, 32px)/1.15 Urbanist, sans-serif;
   font-variant-numeric: tabular-nums;
@@ -2326,21 +2326,21 @@ small {
 }
 .ms-history {
   display: flex;
-  min-height: 395px;
+  min-height: 300px;
   flex: 1;
   flex-direction: column;
-  padding: 24px;
+  padding: 20px;
 }
 .ms-history header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 18px;
+  padding-bottom: 14px;
   border-bottom: 1px solid #e8edf4;
 }
 .ms-history header h2 {
-  font-size: 22px;
+  font-size: 19px;
   letter-spacing: -0.015em;
 }
 .ms-history header em {
@@ -2361,13 +2361,13 @@ small {
   grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  padding: 20px 0;
+  padding: 16px 0;
   border-bottom: 1px solid #edf1f6;
 }
 .ms-history-index {
   display: grid;
-  width: 48px;
-  height: 54px;
+  width: 42px;
+  height: 46px;
   place-items: center;
   border-radius: 15px;
   background: #eef2f8;
@@ -2383,7 +2383,7 @@ small {
 }
 .ms-history-main b,
 .ms-history-result b {
-  font: 700 17px/1.25 Urbanist, sans-serif;
+  font: 700 15px/1.25 Urbanist, sans-serif;
 }
 .ms-history-main small {
   margin-top: 4px;
@@ -2430,7 +2430,7 @@ small {
     grid-template-columns: minmax(0, 1fr);
   }
   .ms-main {
-    min-height: 500px;
+    min-height: 430px;
   }
   .ms-aside {
     display: grid;
