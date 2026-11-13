@@ -142,6 +142,36 @@ function footHtml(total, pages, from, to) {
 
 function shell() {
   const isManager = state.role === "manager";
+  if (!isManager) {
+    const opnameRows = state.stockOpnames.length
+      ? state.stockOpnames.map((opname) => {
+          const difference = Number(opname.difference || 0);
+          const delta = difference > 0 ? `+${difference}` : String(difference);
+          return `<tr>
+            <td><div class="so-product"><b>${escape(opname.product_name)}</b><small>${escape(opname.sku)}</small></div></td>
+            <td>${escape(opname.submitted_by_name)}</td>
+            <td>${opname.system_stock}</td>
+            <td>${opname.counted_stock}</td>
+            <td><b class="so-difference${difference < 0 ? " negative" : difference > 0 ? " positive" : ""}">${delta}</b></td>
+            <td><span class="state-tag good">Selesai</span></td>
+            <td>${escape(date(opname.submitted_at))}${opname.note ? `<small class="so-note">Catatan: ${escape(opname.note)}</small>` : ""}</td>
+          </tr>`;
+        }).join("")
+      : `<tr><td class="pd-empty" colspan="7">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
+    return `
+      <div class="pd-head">
+        <div><h1>Stock opname</h1><p>Catat jumlah fisik barang untuk langsung menyesuaikan stok sistem.</p></div>
+        <button type="button" class="pd-add" data-act="opname">${icons.plus}Catat hasil hitung</button>
+      </div>
+      <section class="pd-card so-intro">${icons.info}<div><b>Penyesuaian langsung</b><p>Pastikan hitungan fisik benar. Setelah disimpan, stok sistem langsung berubah dan hasilnya masuk ke riwayat.</p></div></section>
+      <section class="pd-card">
+        <div class="pd-scroll"><table class="pd-table so-table">
+          <thead><tr><th>Produk</th><th>Kasir</th><th>Stok awal</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Waktu</th></tr></thead>
+          <tbody>${opnameRows}</tbody>
+        </table></div>
+      </section>`;
+  }
+
   const opnameRows = state.stockOpnames.length
     ? state.stockOpnames.map((opname) => {
         const difference = Number(opname.difference || 0);
@@ -355,7 +385,9 @@ export function stock(refresh) {
   }
   return {
     view: "template",
-    css: "product-page stock-page",
+    css: state.role === "cashier"
+      ? "product-page stock-opname-page"
+      : "product-page stock-page",
     borderless: true,
     template: shell,
     on: {
