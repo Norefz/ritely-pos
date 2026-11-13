@@ -1,4 +1,4 @@
-import { ApiError, loginRequest } from "../../api.js";
+import { ApiError, loginRequest, warmBackendRequest } from "../../api.js";
 
 const svg = (path) =>
   `<svg class="lg-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -126,6 +126,7 @@ export function login(onSuccess = () => {}) {
     on: {
       onAfterRender() {
         bind(this.$view, onSuccess);
+        warmBackendRequest().catch(() => {});
         this.$view.querySelector('input[name="username"]')?.focus();
       },
     },

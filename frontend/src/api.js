@@ -67,6 +67,10 @@ export async function loginRequest(username, password) {
   return result.user;
 }
 
+export async function warmBackendRequest() {
+  return apiRequest("/api/health/db");
+}
+
 export async function currentUserRequest() {
   const result = await apiRequest("/api/auth/me");
   return result.user;
