@@ -145,14 +145,12 @@ export function hasAccessToken() {
   return Boolean(accessToken);
 }
 
-export async function logoutRequest() {
-  try {
-    if (accessToken) {
-      await apiRequest("/api/auth/logout", { method: "POST" });
-    }
-  } finally {
-    clearAccessToken();
-  }
+export function logoutRequest() {
+  const request = accessToken
+    ? apiRequest("/api/auth/logout", { method: "POST", keepalive: true })
+    : Promise.resolve();
+  clearAccessToken();
+  return request;
 }
 
 export function clearAccessToken() {

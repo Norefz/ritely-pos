@@ -62,12 +62,10 @@ function navigate(id) {
   if (innerWidth < 900) $$("sidebar").hide();
 }
 function logout() {
-  const finishLogout = async () => {
-    try {
-      await logoutRequest();
-    } catch {
-      // Hapus token lokal juga jika backend sementara tidak dapat dijangkau.
-    }
+  const finishLogout = () => {
+    // Tutup sesi lokal langsung; request keepalive mencabut token di backend
+    // tanpa menahan perpindahan kembali ke halaman login.
+    logoutRequest().catch(() => {});
     history.replaceState(null, "", location.pathname);
     window.location.reload();
   };
