@@ -1,4 +1,4 @@
-import { state, money, completed } from "../../demo.js";
+import { state, money, completed } from "../../state.js";
 import { heading, button } from "./common.js";
 
 const PAGE_SIZE = 10;

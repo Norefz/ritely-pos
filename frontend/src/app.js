@@ -1,4 +1,4 @@
-import { state } from "./demo.js";
+import { state } from "./state.js";
 import { sidebar, menus } from "./views/layout/sidebar.js";
 import { navbar } from "./views/layout/navbar.js";
 import { dashboard } from "./views/pages/dashboard.js";
@@ -69,7 +69,7 @@ function logout() {
   };
   if (state.cart.length) {
     webix
-      .confirm("Keranjang demo akan dikosongkan. Keluar dari akun?")
+      .confirm("Keranjang saat ini akan dikosongkan. Keluar dari akun?")
       .then(finishLogout)
       .catch(() => {});
     return;
@@ -92,7 +92,7 @@ function mountApplication() {
             view: "template",
             id: "dataStatus",
             height: 42,
-            css: "demo-banner",
+            css: "data-status-banner",
             borderless: true,
             template: "Memuat katalog, shift, dan stock opname…",
           },

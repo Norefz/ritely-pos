@@ -1,4 +1,4 @@
-import { state, escape } from "../../demo.js";
+import { state, escape } from "../../state.js";
 import { cashierAvatarSrc } from "../cashier-avatar.js";
 
 const jakartaTime = () =>

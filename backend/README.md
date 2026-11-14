@@ -71,7 +71,7 @@ akun Kasir melalui `POST /api/users` dengan `name`, `username`, `password`, dan
 `assigned_shift` (`shift_1` atau `shift_2`), serta mengubah profil/status Kasir
 melalui `PATCH /api/users/<id>`.
 
-## Katalog produk demo
+## Data awal katalog produk
 
 Seeder katalog menyediakan lima kategori dan 25 produk aktif dengan stok awal
 agar halaman Produk Manajer dan halaman Kasir bisa langsung dicoba. Kedua halaman
@@ -79,17 +79,16 @@ membaca katalog yang sama dari `GET /api/catalog`; seeder tidak membuat salinan
 data di frontend. Produk dibedakan dengan SKU dan aman diperiksa berulang kali:
 data SKU yang sudah ada, termasuk harga atau stok yang sudah diubah, tidak ditimpa.
 
-Sesuai SRS, jalankan hanya pada database development/demo yang terpisah. Jangan
-arahkan `MONGO_DB_NAME` ke database operasional. Contoh menjalankan dari folder
-`backend`:
+Jalankan dari lingkungan development dan arahkan ke database yang akan dipakai
+oleh aplikasi. Untuk database dengan nama standar `ritely-pos`, sebutkan target
+secara eksplisit melalui `RITELY_CONFIRM_DATABASE`:
 
 ```sh
-RITELY_ENVIRONMENT=demo MONGO_DB_NAME=ritely-pos-demo \
-  python -m app.database.seeders.catalog_demo
+RITELY_ENVIRONMENT=development RITELY_CONFIRM_DATABASE=ritely-pos \
+  python -m app.database.seeders.catalog_products
 ```
 
-Set konfigurasi aplikasi ke database demo yang sama sebelum mencoba katalog
-melalui frontend. Halaman Produk Manajer menampilkan 10 produk per halaman;
+Halaman Produk Manajer menampilkan 10 produk per halaman;
 halaman Kasir menampilkan semua produk aktif dan menyediakan filter kategori.
 
 ## Shift

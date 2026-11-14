@@ -1,4 +1,4 @@
-import { state, categoryName, date, escape } from "../../demo.js";
+import { state, categoryName, date, escape } from "../../state.js";
 import { editor } from "./common.js";
 import {
   ApiError,

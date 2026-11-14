@@ -20,7 +20,7 @@ Buka http://localhost:8080. Jalankan backend pada `http://127.0.0.1:5000` dan pa
 - `src/views/pages/`: isi halaman; tidak membuat navbar/sidebar sendiri.
 - `src/styles/app.css`: warna dan tipografi sesuai SRS.
 - `src/api.js`: panggilan API backend dan penyimpanan token selama halaman aktif.
-- `src/demo.js`: data simulasi bersama dan format tampilan.
+- `src/state.js`: state bersama dan format tampilan.
 
 Halaman Manajer: ringkasan, produk, kategori, stok, transaksi, shift, laporan, akun kasir. Halaman Kasir: katalog/keranjang, transaksi, shift. Shift memakai backend: pembukaan mengikuti assigned shift dan jam WIB, penutupan normal hanya pada/setelah akhir jadwal, tidak ada penutupan otomatis, dan hanya satu shift terbuka per toko. Transaksi tunai, struk, dan data produk/stok lainnya masih berupa simulasi frontend.
 

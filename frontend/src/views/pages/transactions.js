@@ -1,4 +1,4 @@
-import { state, money, date, escape } from "../../demo.js";
+import { state, money, date, escape } from "../../state.js";
 import { receipt } from "./common.js";
 
 /* ---------- Riwayat transaksi: konfigurasi & helper ---------- */

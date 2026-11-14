@@ -333,7 +333,7 @@ small {
   font-size: 9px;
   letter-spacing: 0.06em;
 }
-.demo-banner .webix_template {
+.data-status-banner .webix_template {
   background: #eff6ff;
   color: #1e40af;
   padding: 10px 24px;
@@ -454,7 +454,7 @@ small {
   .metrics small {
     font-size: 11px;
   }
-  .demo-banner .webix_template {
+  .data-status-banner .webix_template {
     padding: 8px 12px;
     font-size: 11px;
   }
@@ -482,7 +482,7 @@ small {
   color: #526175;
 }
 @media (max-width: 700px) {
-  .demo-banner .webix_template {
+  .data-status-banner .webix_template {
     padding-left: 16px;
     padding-right: 16px;
   }

@@ -1,4 +1,4 @@
-import { state, escape } from "../../demo.js";
+import { state, escape } from "../../state.js";
 export const menus={
 manager:[["dashboard","Dasbor"],["reports","Laporan"],["products","Produk"],["stock","Stok"],["shifts","Shift"],["users","Pengguna"],["audit","Log audit"]],
 cashier:[["shifts","Shift saya"],["pos","Kasir"],["transactions","Transaksi saya"],["stock","Stok"]]

@@ -1,4 +1,4 @@
-import { escape } from "../../demo.js";
+import { escape } from "../../state.js";
 import { ApiError, apiRequest } from "../../api.js";
 import { cashierAvatarSrc } from "../cashier-avatar.js";
 

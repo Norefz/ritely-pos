@@ -1,4 +1,4 @@
-import { state, money, date, completed, escape } from "../../demo.js";
+import { state, money, date, completed, escape } from "../../state.js";
 import { heading, table, button } from "./common.js";
 const hourly = [
   ["08.00", 4],

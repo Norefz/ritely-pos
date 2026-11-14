@@ -1,4 +1,4 @@
-"""Seed a sample product catalog into an isolated development/demo database."""
+"""Seed the initial product catalog into a development database."""
 
 import os
 import re
@@ -58,15 +58,20 @@ def validate_target():
     environment = os.getenv("RITELY_ENVIRONMENT", "").strip().lower()
     database_name = Config.MONGO_DB_NAME.strip()
     database_tokens = set(re.split(r"[^a-z0-9]+", database_name.lower()))
+    confirmed_database = os.getenv("RITELY_CONFIRM_DATABASE", "").strip()
 
     if os.getenv("VERCEL") or os.getenv("VERCEL_ENV", "").lower() == "production":
-        raise ValueError("Demo seeder tidak boleh dijalankan pada deployment Vercel.")
-    if environment not in {"development", "demo"}:
-        raise ValueError("Set RITELY_ENVIRONMENT=development atau demo sebelum menjalankan seeder.")
-    if not database_tokens.intersection({"dev", "development", "demo"}):
+        raise ValueError("Seeder katalog hanya dapat dijalankan secara lokal.")
+    if environment != "development":
+        raise ValueError("Set RITELY_ENVIRONMENT=development sebelum menjalankan seeder.")
+    if (
+        not database_tokens.intersection({"dev", "development"})
+        and confirmed_database != database_name
+    ):
         raise ValueError(
             "Gunakan database terpisah bernama dengan akhiran -dev, "
-            "-development, atau -demo. Database produksi tidak boleh diisi data demo."
+            "atau -development. Jika nama database yang dipilih berbeda, set "
+            "RITELY_CONFIRM_DATABASE sama persis dengan MONGO_DB_NAME."
         )
 
 
@@ -125,11 +130,11 @@ def main():
         ensure_indexes(database)
         created_categories, created_products = seed_catalog(database)
     except (PyMongoError, ValueError) as error:
-        print(f"Seeder katalog demo gagal: {error}")
+        print(f"Seeder katalog gagal: {error}")
         return 1
 
     print(
-        "Seeder katalog demo selesai: "
+        "Seeder katalog selesai: "
         f"{created_categories} kategori baru, {created_products} produk baru; "
         f"{len(CATEGORIES)} kategori dan {len(PRODUCTS)} SKU diperiksa."
     )

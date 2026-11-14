@@ -1,4 +1,4 @@
-import { escape, money, date } from "../../demo.js";
+import { escape, money, date } from "../../state.js";
 export const heading = (title, subtitle) => ({
   view: "template",
   borderless: true,

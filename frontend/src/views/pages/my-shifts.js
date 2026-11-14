@@ -1,4 +1,4 @@
-import { state, money, escape } from "../../demo.js";
+import { state, money, escape } from "../../state.js";
 import { ApiError, closeShiftRequest, openShiftRequest } from "../../api.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
 import { cashierAvatarSrc } from "../cashier-avatar.js";
