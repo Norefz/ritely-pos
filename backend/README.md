@@ -79,13 +79,14 @@ membaca katalog yang sama dari `GET /api/catalog`; seeder tidak membuat salinan
 data di frontend. Produk dibedakan dengan SKU dan aman diperiksa berulang kali:
 data SKU yang sudah ada, termasuk harga atau stok yang sudah diubah, tidak ditimpa.
 
-Jalankan dari lingkungan development dan arahkan ke database yang akan dipakai
-oleh aplikasi. Untuk database dengan nama standar `ritely-pos`, sebutkan target
-secara eksplisit melalui `RITELY_CONFIRM_DATABASE`:
+Jalankan dari root repository dalam lingkungan development dan arahkan ke
+database yang akan dipakai oleh aplikasi. Untuk database dengan nama standar
+`ritely-pos`, sebutkan target secara eksplisit melalui `RITELY_CONFIRM_DATABASE`:
 
 ```sh
-RITELY_ENVIRONMENT=development RITELY_CONFIRM_DATABASE=ritely-pos \
-  python -m app.database.seeders.catalog_products
+PYTHONPATH=backend RITELY_ENVIRONMENT=development \
+  RITELY_CONFIRM_DATABASE=ritely-pos \
+  backend/.venv/bin/python -m app.database.seeders.catalog_products
 ```
 
 Halaman Produk Manajer menampilkan 10 produk per halaman;
