@@ -653,14 +653,8 @@ def refresh_payment_status(sale_id):
     try:
         _client, database = _database()
         sale = _sale_access(database, sale_id, user)
-        if sale["payment_method"] == "online" and sale["status"] == "pending":
-            try:
-                provider = midtrans.get_transaction_status(sale["payment_order_id"])
-                sale = _apply_provider_status(database, sale, provider, user["_id"])
-            except midtrans.MidtransNotFound:
-                pass
-            except midtrans.MidtransError:
-                raise CheckoutError("payment_status_unknown", 503) from None
+        # Midtrans webhooks update the sale. The cashier client only reads this
+        # persisted state and never queries Midtrans for payment status.
         return jsonify(sale=_public_sale(sale)), 200
     except CheckoutError as error:
         return jsonify(error=error.code, message=str(error)), error.status

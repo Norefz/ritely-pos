@@ -7,6 +7,7 @@ import { state } from "./state.js";
 
 let paymentConfig;
 let snapPromise;
+const paymentWatchers = new Map();
 
 export async function loadPaymentConfig() {
   try {
@@ -54,7 +55,12 @@ function mergeSale(updated) {
 async function checkStatus(sale, refresh) {
   try {
     const response = await refreshPaymentStatusRequest(sale.sale_id);
+    const previous = state.sales.find((row) => row.sale_id === response.sale.sale_id);
     const saved = mergeSale(response.sale);
+    const changed = !previous
+      || previous.status !== saved.status
+      || previous.payment_status !== saved.payment_status
+      || previous.payment_reference !== saved.payment_reference;
     if (saved.status === "completed" && !saved._stockApplied) {
       for (const item of saved.items) {
         const product = state.products.find((row) => String(row.id) === String(item.product_id));
@@ -62,11 +68,44 @@ async function checkStatus(sale, refresh) {
       }
       saved._stockApplied = true;
     }
-    refresh?.();
+    if (changed) refresh?.();
     return saved;
   } catch {
     return sale;
   }
+}
+
+function isPaymentFinal(sale) {
+  return sale.status === "completed"
+    || sale.status === "voided"
+    || sale.status === "expired"
+    || sale.payment_status === "paid"
+    || sale.payment_status === "failed"
+    || sale.payment_status === "expired";
+}
+
+function watchPaymentStatus(sale, refresh) {
+  if (paymentWatchers.has(sale.sale_id)) return;
+  const expiresAt = Date.parse(sale.payment_expired_at || "") || Date.now() + 15 * 60 * 1000;
+  const watcher = (async () => {
+    let current = sale;
+    let delay = 1500;
+    while (!isPaymentFinal(current) && Date.now() < expiresAt) {
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+      current = await checkStatus(current, refresh);
+      if (current.status === "completed") {
+        webix.message("Pembayaran terverifikasi dan transaksi selesai.");
+      } else if (current.payment_status === "paid") {
+        webix.message({ type: "error", text: "Pembayaran diterima, tetapi transaksi perlu pemeriksaan manager." });
+      } else if (current.payment_status === "failed" || current.status === "voided") {
+        webix.message({ type: "error", text: "Pembayaran gagal. Transaksi tidak diselesaikan." });
+      } else if (current.payment_status === "expired" || current.status === "expired") {
+        webix.message({ type: "error", text: "Waktu pembayaran habis. Transaksi tidak diselesaikan." });
+      }
+      delay = Math.min(Math.round(delay * 1.35), 7000);
+    }
+  })().finally(() => paymentWatchers.delete(sale.sale_id));
+  paymentWatchers.set(sale.sale_id, watcher);
 }
 
 export async function openSnapPayment(sale, token, refresh) {
@@ -78,6 +117,7 @@ export async function openSnapPayment(sale, token, refresh) {
         if (finished) return;
         finished = true;
         const updated = await checkStatus(sale, refresh);
+        if (!isPaymentFinal(updated)) watchPaymentStatus(updated, refresh);
         if (message) webix.message(message(updated));
         resolve(updated);
       };
@@ -85,13 +125,13 @@ export async function openSnapPayment(sale, token, refresh) {
         onSuccess: () => settle((updated) => updated.status === "completed"
           ? "Pembayaran terverifikasi dan transaksi selesai."
           : "Pembayaran diterima Midtrans dan sedang diverifikasi backend."),
-        onPending: () => settle(() => "Pembayaran masih menunggu. Transaksi akan diperbarui setelah status Midtrans terverifikasi."),
+        onPending: () => settle(() => "Pembayaran masih menunggu. Status akan diperbarui setelah webhook mengonfirmasi backend."),
         onError: () => settle((updated) => updated.status === "completed"
           ? "Pembayaran terverifikasi dan transaksi selesai."
-          : "Pembayaran belum berhasil. Status transaksi tetap diperiksa melalui Midtrans."),
+          : "Pembayaran belum terkonfirmasi. Status transaksi akan diperbarui dari backend."),
         onClose: () => settle((updated) => updated.status === "completed"
           ? "Pembayaran terverifikasi dan transaksi selesai."
-          : "Halaman pembayaran ditutup. Transaksi tetap pending sampai status Midtrans terkonfirmasi."),
+          : "Halaman pembayaran ditutup. Transaksi tetap menunggu konfirmasi webhook dari backend."),
       });
     });
   } catch {
