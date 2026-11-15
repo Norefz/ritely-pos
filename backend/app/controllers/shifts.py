@@ -14,7 +14,6 @@ from app.services.shift_service import (
     ShiftNotFoundError,
     ShiftNotOpenError,
     ShiftNotEndedError,
-    ShiftOutsideWindowError,
     ShiftPendingSalesError,
     ShiftOwnershipError,
     close_shift,
@@ -96,8 +95,6 @@ def post_open_shift():
                 _audit_log(session, user, "shift_opened", shift)
     except ShiftAlreadyOpenError:
         return jsonify(error="shift_already_open"), 409
-    except ShiftOutsideWindowError as error:
-        return jsonify(error="outside_shift_window", message=str(error)), 409
     except ValueError as error:
         return jsonify(error="invalid_shift", message=str(error)), 400
     except PyMongoError:

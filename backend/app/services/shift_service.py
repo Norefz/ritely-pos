@@ -35,10 +35,6 @@ class ShiftOwnershipError(Exception):
     """Raised when a cashier attempts to close another cashier's shift."""
 
 
-class ShiftOutsideWindowError(Exception):
-    """Raised when a cashier tries to open outside their assigned hours."""
-
-
 class ShiftNotEndedError(Exception):
     """Raised when a cashier tries to close before the scheduled end."""
 
@@ -139,14 +135,6 @@ def open_shift(collection, user, session=None):
     assigned_shift = user.get("assigned_shift")
     if assigned_shift not in ASSIGNED_SHIFTS:
         raise ValueError("Kasir belum memiliki penugasan shift yang valid.")
-
-    now = datetime.now(STORE_TIMEZONE)
-    start_time, end_time = SHIFT_WINDOWS[assigned_shift]
-    if not start_time <= now.time().replace(tzinfo=None) < end_time:
-        raise ShiftOutsideWindowError(
-            f"Shift {assigned_shift} hanya dapat dibuka pada "
-            f"{start_time:%H.%M}–{end_time:%H.%M} WIB."
-        )
 
     document = {
         "cashier_id": user["_id"],

@@ -20,9 +20,9 @@ export function wibMinutesNow() {
 }
 
 export function canOpenShift(shiftType) {
-  const window = shiftWindow(shiftType);
-  const now = wibMinutesNow();
-  return Boolean(window && now >= window.start && now < window.end);
+  // Shift penugasan tetap menentukan jenis shift, tetapi pembukaan dapat
+  // dilakukan kapan saja. Batas waktu hanya berlaku untuk penutupan shift.
+  return Boolean(shiftWindow(shiftType));
 }
 
 export function canCloseShift(shiftType) {
