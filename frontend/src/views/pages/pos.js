@@ -142,7 +142,7 @@ function shell() {
     <div class="ps-wrap">
       <div class="ps-top">
         <label class="pd-search">${icons.search}<input type="search" placeholder="Cari produk atau scan barcode" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
-        <span class="ps-shift${open && !shiftEnded ? " on" : ""}"><span></span>${open ? `${escape(shiftType(openShift).replace("_", " "))} · ${shiftEnded ? "waktu shift berakhir" : `terbuka sejak ${since} WIB`}` : otherShift ? `Shift ${escape(state.shift.cashier)} masih terbuka` : openAllowed ? "Shift belum dibuka" : `Jadwal ${assignedWindow?.label || "—"} WIB`}</span>
+        <span class="ps-shift${open ? " on" : ""}"><span></span>${open ? `${escape(shiftType(openShift).replace("_", " "))} · terbuka sejak ${since} WIB` : otherShift ? `Shift ${escape(state.shift.cashier)} masih terbuka` : openAllowed ? "Shift belum dibuka" : `Jadwal ${assignedWindow?.label || "—"} WIB`}</span>
         ${shiftEnded ? `<button type="button" class="sh-btn primary" data-act="manage-shift">Tutup shift</button>` : open || otherShift || !openAllowed ? "" : `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`}
       </div>
       <div class="ps-main">
@@ -282,10 +282,6 @@ export function pos(refresh) {
       });
       return;
     }
-    if (canCloseShift(shiftType(currentShift()))) {
-      webix.message({ type: "error", text: "Jam shift berakhir. Tutup shift sebelum memulai transaksi baru." });
-      return;
-    }
     const p = findProduct(id),
       item = state.cart.find((i) => String(i.id) === id);
     if (!p?.active || (item?.quantity || 0) >= p.stock) {
@@ -350,10 +346,6 @@ export function pos(refresh) {
       webix.message({ type: "error", text: "Pembayaran online belum dikonfigurasi pada backend." });
       return;
     }
-    if (canCloseShift(shiftType(currentShift()))) {
-      webix.message({ type: "error", text: "Jam shift sudah berakhir. Transaksi baru tidak dapat dibuat." });
-      return;
-    }
     if (
       state.cart.some((i) => {
         const p = state.products.find((p) => p.id === i.id);
@@ -368,8 +360,8 @@ export function pos(refresh) {
     }
     const method = view.paymentMethod;
     const proceed = async () => {
-      if (!currentShift() || canCloseShift(shiftType(currentShift()))) {
-        webix.message({ type: "error", text: "Shift sudah berakhir atau tidak lagi aktif. Transaksi baru tidak dapat dibuat." });
+      if (!currentShift()) {
+        webix.message({ type: "error", text: "Shift tidak lagi aktif. Buka shift sebelum membuat transaksi." });
         return;
       }
       view.submitting = true;
