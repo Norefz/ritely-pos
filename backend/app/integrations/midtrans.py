@@ -114,7 +114,12 @@ def verify_notification_signature(payload):
     import hashlib
     import hmac
 
-    server_key = current_app.config.get("MIDTRANS_SERVER_KEY", "")
+    # Some Midtrans dashboards expose a dedicated Signature Secret Key
+    # separately from the API Server Keys. Preserve support for legacy setups.
+    server_key = (
+        current_app.config.get("MIDTRANS_SIGNATURE_SECRET_KEY", "")
+        or current_app.config.get("MIDTRANS_SERVER_KEY", "")
+    )
     required = ("order_id", "status_code", "gross_amount", "signature_key")
     if not server_key or any(not payload.get(key) for key in required):
         return False

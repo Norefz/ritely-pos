@@ -32,5 +32,6 @@ class Config:
     PORT = int(os.getenv("PORT", "5000"))
     DEBUG = os.getenv("FLASK_DEBUG", "0").lower() in {"1", "true", "yes"}
     MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY", "").strip()
+    MIDTRANS_SIGNATURE_SECRET_KEY = os.getenv("MIDTRANS_SIGNATURE_SECRET_KEY", "").strip()
     MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY", "").strip()
     MIDTRANS_TIMEOUT_SECONDS = float(os.getenv("MIDTRANS_TIMEOUT_SECONDS", "12"))
