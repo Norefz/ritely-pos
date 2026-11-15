@@ -2,7 +2,6 @@ import { state, categoryName, date, escape } from "../../state.js";
 import { editor } from "./common.js";
 import {
   ApiError,
-  adjustStockRequest,
   submitStockOpnameRequest,
 } from "../../api.js";
 
@@ -101,7 +100,7 @@ function levelHtml(p) {
 }
 function rowHtml(p) {
   const managerAction = state.role === "manager"
-    ? `<td class="pd-act"><button type="button" class="pd-edit" data-act="adjust" data-id="${escape(String(p.id))}" aria-label="Sesuaikan stok ${escape(p.name)}">${icons.pencil}Sesuaikan stok</button></td>`
+    ? `<td class="pd-act"><button type="button" class="pd-edit" data-act="adjust" data-id="${escape(String(p.id))}" aria-label="Stock opname ${escape(p.name)}">${icons.pencil}Stock opname</button></td>`
     : "";
   return `<tr>
     <td><div class="pd-name"><i class="pd-av ${tone(p.category)}">${escape(initials(p.name))}</i>
@@ -142,36 +141,6 @@ function footHtml(total, pages, from, to) {
 
 function shell() {
   const isManager = state.role === "manager";
-  if (!isManager) {
-    const opnameRows = state.stockOpnames.length
-      ? state.stockOpnames.map((opname) => {
-          const difference = Number(opname.difference || 0);
-          const delta = difference > 0 ? `+${difference}` : String(difference);
-          return `<tr>
-            <td><div class="so-product"><b>${escape(opname.product_name)}</b><small>${escape(opname.sku)}</small></div></td>
-            <td>${escape(opname.submitted_by_name)}</td>
-            <td>${opname.system_stock}</td>
-            <td>${opname.counted_stock}</td>
-            <td><b class="so-difference${difference < 0 ? " negative" : difference > 0 ? " positive" : ""}">${delta}</b></td>
-            <td><span class="state-tag good">Selesai</span></td>
-            <td>${escape(date(opname.submitted_at))}${opname.note ? `<small class="so-note">Catatan: ${escape(opname.note)}</small>` : ""}</td>
-          </tr>`;
-        }).join("")
-      : `<tr><td class="pd-empty" colspan="7">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
-    return `
-      <div class="pd-head">
-        <div><h1>Stok</h1><p>Catat jumlah fisik barang untuk langsung menyesuaikan stok sistem.</p></div>
-        <button type="button" class="pd-add" data-act="opname">${icons.plus}Catat hasil hitung</button>
-      </div>
-      <section class="pd-card so-intro">${icons.info}<div><b>Penyesuaian langsung</b><p>Pastikan hitungan fisik benar. Setelah disimpan, stok sistem langsung berubah dan hasilnya masuk ke riwayat.</p></div></section>
-      <section class="pd-card">
-        <div class="pd-scroll"><table class="pd-table so-table">
-          <thead><tr><th>Produk</th><th>Kasir</th><th>Stok awal</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Waktu</th></tr></thead>
-          <tbody>${opnameRows}</tbody>
-        </table></div>
-      </section>`;
-  }
-
   const opnameRows = state.stockOpnames.length
     ? state.stockOpnames.map((opname) => {
         const difference = Number(opname.difference || 0);
@@ -182,16 +151,17 @@ function shell() {
           <td>${opname.system_stock}</td>
           <td>${opname.counted_stock}</td>
           <td><b class="so-difference${difference < 0 ? " negative" : difference > 0 ? " positive" : ""}">${delta}</b></td>
+          ${!isManager ? '<td><span class="state-tag good">Selesai</span></td>' : ""}
           <td>${escape(date(opname.submitted_at))}${opname.note ? `<small class="so-note">Catatan: ${escape(opname.note)}</small>` : ""}</td>
         </tr>`;
       }).join("")
-    : `<tr><td class="pd-empty" colspan="6">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
+    : `<tr><td class="pd-empty" colspan="${isManager ? 6 : 7}">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
   return `
     <div class="pd-head">
-      <div><h1>Stok</h1><p>${isManager ? "Pantau persediaan dan sesuaikan jumlah stok." : "Lihat persediaan dan catat hasil hitung fisik."}</p></div>
-      ${isManager ? "" : `<button type="button" class="pd-add" data-act="opname">${icons.plus}Catat stock opname</button>`}
-      <div data-part="pill">${pillHtml()}</div>
+      <div><h1>Stok</h1><p>Pantau persediaan dan catat hasil hitung fisik.</p></div>
+      ${isManager ? `<div data-part="pill">${pillHtml()}</div>` : `<button type="button" class="pd-add" data-act="opname">${icons.plus}Catat hasil hitung</button>`}
     </div>
+    ${isManager ? "" : `<section class="pd-card so-intro">${icons.info}<div><b>Stock opname</b><p>Hitung jumlah fisik barang. Setelah disimpan, stok sistem langsung disesuaikan dan hasilnya masuk ke riwayat.</p></div></section>`}
     <section class="pd-card pd-stats" data-part="stats">${statsHtml()}</section>
     <section class="pd-card pd-filters">
       <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nama atau SKU" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
@@ -214,7 +184,7 @@ function shell() {
     <section class="pd-card">
       <div class="pd-head stock-section-head"><div><h2>Riwayat stock opname</h2><p>Hitungan fisik langsung menyesuaikan stok dan tercatat di sini.</p></div></div>
       <div class="pd-scroll"><table class="pd-table so-table">
-        <thead><tr><th>Produk</th><th>Petugas</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th><th>Waktu</th></tr></thead>
+        <thead><tr><th>Produk</th><th>${isManager ? "Petugas" : "Kasir"}</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th>${isManager ? "" : "<th>Status</th>"}<th>Waktu</th></tr></thead>
         <tbody>${opnameRows}</tbody>
       </table></div>
     </section>
@@ -313,7 +283,7 @@ function bind(root, adjust, refresh) {
     const el = e.target.closest("[data-act]");
     if (!el || el.disabled) return;
     const act = el.dataset.act;
-    if (act === "opname" && state.role === "cashier")
+    if (act === "opname")
       return submitOpname(refresh);
     if (act === "adjust")
       return adjust(state.products.find((p) => String(p.id) === el.dataset.id));
@@ -337,46 +307,53 @@ export function stock(refresh) {
   function adjust(p) {
     if (!p) return;
     editor(
-      `Sesuaikan stok · ${p.name}`,
+      `Stock opname · ${p.name}`,
       [
         {
           view: "text",
-          name: "stock",
-          label: "Stok akhir",
+          name: "system_stock",
+          label: "Stok sistem saat ini",
+          readonly: true,
+        },
+        {
+          view: "text",
+          name: "counted_stock",
+          label: "Stok fisik",
           type: "number",
           required: true,
         },
         {
           view: "textarea",
-          name: "reason",
-          label: "Alasan penyesuaian",
-          required: true,
+          name: "note",
+          label: "Catatan (opsional)",
         },
       ],
-      p,
+      { system_stock: p.stock, counted_stock: "", note: "" },
       async (v) => {
-        if (
-          !Number.isInteger(+v.stock) ||
-          +v.stock < 0 ||
-          !(v.reason || "").trim()
-        ) {
+        const counted = Number(v.counted_stock);
+        if (!Number.isInteger(counted) || counted < 0) {
           webix.message({
             type: "error",
-            text: "Stok harus bilangan bulat ≥ 0 dan alasan wajib diisi.",
+            text: "Stok fisik harus bilangan bulat ≥ 0.",
           });
           return false;
         }
         try {
-          const result = await adjustStockRequest(p.id, +v.stock, v.reason.trim());
-          p.stock = result.product.stock;
+          const result = await submitStockOpnameRequest({
+            product_id: p.id,
+            counted_stock: counted,
+            note: v.note || "",
+          });
+          state.stockOpnames.unshift(result.opname);
+          p.stock = result.opname.counted_stock;
           refresh();
-          webix.message("Penyesuaian stok tersimpan dan tercatat di database.");
+          webix.message("Stock opname tersimpan dan stok langsung disesuaikan.");
         } catch (error) {
           const message = error instanceof ApiError && error.code === "stock_changed_retry"
             ? "Stok berubah dari sesi lain. Muat ulang lalu coba lagi."
             : error instanceof ApiError && error.code === "database_unavailable"
               ? "Database belum dapat dijangkau."
-              : "Penyesuaian stok gagal disimpan.";
+              : "Stock opname gagal disimpan.";
           webix.message({ type: "error", text: message });
           return false;
         }
@@ -385,9 +362,7 @@ export function stock(refresh) {
   }
   return {
     view: "template",
-    css: state.role === "cashier"
-      ? "product-page stock-opname-page"
-      : "product-page stock-page",
+    css: "product-page stock-page",
     borderless: true,
     template: shell,
     on: {

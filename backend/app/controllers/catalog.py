@@ -338,8 +338,8 @@ def post_stock_opname():
     user, auth_error = _current_user()
     if auth_error:
         return auth_error
-    if user["role"] != "cashier":
-        return jsonify(error="cashier_role_required"), 403
+    if user["role"] not in {"cashier", "manager"}:
+        return jsonify(error="stock_opname_role_required"), 403
     data, error = _json_object()
     if error:
         return error
