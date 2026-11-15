@@ -3508,6 +3508,9 @@ small {
   font-weight: 500;
   color: #536177;
 }
+.ps-cash[hidden] {
+  display: none;
+}
 .ps-cash input {
   height: 48px;
   box-sizing: border-box;
