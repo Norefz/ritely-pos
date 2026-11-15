@@ -214,8 +214,8 @@ function openOpname(product, refresh) {
   if (!product) return;
   const systemStock = product.stock;
   const countedStock = physicalStock(product);
-  const formatDifference = (counted) => {
-    const difference = counted - systemStock;
+  const formatDifference = (nextSystemStock) => {
+    const difference = nextSystemStock - countedStock;
     return difference > 0 ? `+${difference}` : String(difference);
   };
   editor(
@@ -230,18 +230,39 @@ function openOpname(product, refresh) {
       {
         view: "text",
         name: "physical_stock",
-        label: "Stok fisik",
+        label: "Stok fisik tersimpan",
+        readonly: true,
+      },
+      {
+        view: "text",
+        name: "new_system_stock",
+        label: "Stok sistem baru",
         required: true,
         attributes: { inputmode: "numeric", pattern: "[0-9]*" },
+        validate: (value) => /^\d+$/.test(String(value ?? "")),
         on: {
+          onAfterRender() {
+            const input = this.getInputNode();
+            if (!input || input.dataset.digitsOnly === "true") return;
+            input.dataset.digitsOnly = "true";
+            input.addEventListener("input", () => {
+              const sanitized = input.value.replace(/[^0-9]/g, "");
+              if (input.value !== sanitized) {
+                const cursor = input.selectionStart;
+                input.value = sanitized;
+                input.setSelectionRange(Math.min(cursor, sanitized.length), Math.min(cursor, sanitized.length));
+                this.setValue(sanitized);
+              }
+            });
+          },
           onChange(value) {
             const raw = String(value ?? "").trim();
-            const counted = Number(raw);
-            const differenceField = $$("editorForm")?.elements?.difference;
+            const target = Number(raw);
+            const differenceField = $$("opnameDifference");
             if (differenceField) {
               differenceField.setValue(
-                raw && Number.isInteger(counted) && counted >= 0
-                  ? formatDifference(counted)
+                raw && Number.isSafeInteger(target) && target >= 0
+                  ? formatDifference(target)
                   : "—",
               );
             }
@@ -251,37 +272,39 @@ function openOpname(product, refresh) {
       {
         view: "text",
         name: "difference",
+        id: "opnameDifference",
         label: "Selisih",
         readonly: true,
       },
     ],
     {
       system_stock: systemStock,
-      physical_stock: String(countedStock),
-      difference: formatDifference(countedStock),
+      physical_stock: countedStock,
+      new_system_stock: String(systemStock),
+      difference: formatDifference(systemStock),
     },
     async (values) => {
-      const raw = String(values.physical_stock ?? "").trim();
-      const counted = Number(raw);
-      if (!raw || !Number.isInteger(counted) || counted < 0) {
-        webix.message({ type: "error", text: "Stok fisik harus bilangan bulat ≥ 0." });
+      const raw = String(values.new_system_stock ?? "").trim();
+      const target = Number(raw);
+      if (!raw || !/^\d+$/.test(raw) || !Number.isSafeInteger(target) || target < 0) {
+        webix.message({ type: "error", text: "Stok sistem harus bilangan bulat ≥ 0." });
         return false;
       }
       try {
         const result = await submitStockOpnameRequest({
           product_id: product.id,
-          physical_stock: counted,
+          system_stock: target,
         });
         if (state.role === "manager") state.stockOpnames.unshift(result.opname);
         const currentProduct = state.products.find(
           (item) => String(item.id) === String(result.opname.product_id),
         );
         if (currentProduct) {
-          currentProduct.stock = result.opname.physical_stock;
-          currentProduct.physicalStock = result.opname.physical_stock;
+          currentProduct.stock = result.opname.system_stock + result.opname.difference;
+          currentProduct.physicalStock = countedStock;
         }
         refresh();
-        webix.message(`Stock opname tersimpan. Stok sistem sekarang ${result.opname.physical_stock}.`);
+        webix.message(`Stock opname tersimpan. Stok sistem sekarang ${target}.`);
       } catch (error) {
         let message = "Stock opname gagal disimpan.";
         if (error instanceof ApiError) {

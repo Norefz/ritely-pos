@@ -64,7 +64,7 @@ def public_category(document):
     }
 
 
-def public_product(document):
+def public_product(document, physical_stock=None):
     price = document["selling_price"]
     if isinstance(price, Decimal128):
         price = str(price.to_decimal())
@@ -75,7 +75,11 @@ def public_product(document):
         "category_id": str(document["category_id"]),
         "selling_price": str(price),
         "stock": document["stock"],
-        "physical_stock": document.get("physical_stock", document["stock"]),
+        "physical_stock": (
+            physical_stock
+            if physical_stock is not None
+            else document.get("physical_stock", document["stock"])
+        ),
         "minimum_stock": document["minimum_stock"],
         "is_active": document["is_active"],
         "created_at": _isoformat(document.get("created_at")),
@@ -99,10 +103,13 @@ def list_categories(collection, include_inactive=True):
     ]
 
 
-def list_products(collection, include_inactive=True):
+def list_products(collection, include_inactive=True, physical_counts=None):
     query = {} if include_inactive else {"is_active": True}
     return [
-        public_product(document)
+        public_product(
+            document,
+            (physical_counts or {}).get(str(document["_id"])),
+        )
         for document in collection.find(query).sort("name", 1)
     ]
 

@@ -77,6 +77,21 @@ def _json_object():
     return data, None
 
 
+def _latest_physical_counts():
+    rows = get_stock_opnames_collection().aggregate(
+        [
+            {"$sort": {"submitted_at": -1}},
+            {
+                "$group": {
+                    "_id": "$product_id",
+                    "physical_stock": {"$first": "$physical_stock"},
+                }
+            },
+        ]
+    )
+    return {str(row["_id"]): row["physical_stock"] for row in rows}
+
+
 @catalog_bp.get("/catalog")
 def get_catalog():
     user, error = _current_user()
@@ -84,8 +99,13 @@ def get_catalog():
         return error
     include_inactive = user["role"] == "manager"
     try:
+        products = get_products_collection()
         return jsonify(
-            products=list_products(get_products_collection(), include_inactive),
+            products=list_products(
+                products,
+                include_inactive,
+                physical_counts=_latest_physical_counts(),
+            ),
             categories=list_categories(get_categories_collection(), include_inactive),
         ), 200
     except PyMongoError:
@@ -99,8 +119,11 @@ def get_products():
     if error:
         return error
     try:
+        products_collection = get_products_collection()
         products = list_products(
-            get_products_collection(), user["role"] == "manager"
+            products_collection,
+            user["role"] == "manager",
+            physical_counts=_latest_physical_counts(),
         )
         return jsonify(products=products), 200
     except PyMongoError:
@@ -341,7 +364,7 @@ def post_stock_opname():
     data, error = _json_object()
     if error:
         return error
-    allowed = {"product_id", "physical_stock"}
+    allowed = {"product_id", "system_stock"}
     if set(data) - allowed:
         return jsonify(error="unsupported_stock_opname_fields"), 400
     try:
@@ -368,6 +391,7 @@ def post_stock_opname():
                     {
                         "product_id": ObjectId(opname["product_id"]),
                         "system_stock": opname["system_stock"],
+                        "new_system_stock": opname["system_stock"] + opname["difference"],
                         "physical_stock": opname["physical_stock"],
                         "difference": opname["difference"],
                     },

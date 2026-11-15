@@ -50,16 +50,25 @@ def submit_opname(opnames, products, movements, data, user, session=None):
     if not product or not product.get("is_active", True):
         raise CatalogItemNotFoundError
 
-    physical_stock = _nonnegative_int(data.get("physical_stock"), "Hasil hitung fisik")
+    system_stock = _nonnegative_int(data.get("system_stock"), "Stok sistem")
+    latest_opname = opnames.find_one(
+        {"product_id": product["_id"]},
+        sort=[("submitted_at", -1)],
+        session=session,
+    )
+    physical_stock = (
+        latest_opname["physical_stock"]
+        if latest_opname
+        else product.get("physical_stock", product["stock"])
+    )
 
     now = datetime.now(timezone.utc)
-    difference = physical_stock - product["stock"]
+    difference = system_stock - product["stock"]
     updated_product = products.find_one_and_update(
         {"_id": product["_id"], "stock": product["stock"]},
         {
             "$set": {
-                "stock": physical_stock,
-                "physical_stock": physical_stock,
+                "stock": system_stock,
                 "updated_at": now,
             }
         },
