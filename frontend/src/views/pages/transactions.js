@@ -1,22 +1,24 @@
 import { state, money, date, escape } from "../../state.js";
 import { receipt } from "./common.js";
+import { continueSalePayment } from "../../payments.js";
 
 /* ---------- Riwayat transaksi: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
-const CASHIER = "Dina Pratiwi"; // kasir demo yang sedang bertugas
 // Filter bertahan selama sesi, termasuk saat refresh() membangun ulang halaman.
 const view = { q: "", status: "all", page: 1 };
 
 const STATUS = {
   completed: { label: "Selesai", cls: "good" },
-  pending: { label: "Pending", cls: "warning" },
+  pending: { label: "Menunggu pembayaran", cls: "warning" },
   voided: { label: "Dibatalkan", cls: "empty" },
+  expired: { label: "Kedaluwarsa", cls: "empty" },
 };
 const FILTERS = [
   ["all", "Semua"],
   ["completed", "Selesai"],
   ["pending", "Pending"],
   ["voided", "Dibatalkan"],
+  ["expired", "Kedaluwarsa"],
 ];
 
 const svg = (path) =>
@@ -38,7 +40,7 @@ const isManager = () => state.role === "manager";
 // Manajer melihat seluruh transaksi; Kasir hanya transaksinya sendiri.
 const visible = () =>
   [...state.sales]
-    .filter((s) => isManager() || s.cashier === CASHIER)
+    .filter((s) => isManager() || s.cashier_id === state.currentUser?.id)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 const statusOf = (s) => STATUS[s.status] || { label: s.status, cls: "" };
 const columns = () => (isManager() ? 8 : 7);
@@ -95,7 +97,7 @@ function rowHtml(s) {
     <td><span class="tx-method${online ? " online" : ""}">${icons.wallet}${online ? "Online" : "Tunai"}</span></td>
     <td class="pd-r tx-total">${money(s.total)}</td>
     <td><span class="stock-tag ${st.cls}">${escape(st.label)}</span></td>
-    <td class="pd-act"><button type="button" class="pd-edit" data-act="open" data-id="${escape(String(s.id))}" aria-label="${pending ? "Lihat detail" : "Lihat struk"} ${escape(s.id)}">${icons.receipt}${pending ? "Lihat detail" : "Lihat struk"}</button></td>
+    <td class="pd-act">${pending && online ? `<button type="button" class="pd-edit" data-act="continue" data-id="${escape(String(s.sale_id))}" aria-label="Lanjutkan pembayaran ${escape(s.id)}">Lanjutkan pembayaran</button>` : `<button type="button" class="pd-edit" data-act="open" data-id="${escape(String(s.id))}" aria-label="Lihat struk ${escape(s.id)}">${icons.receipt}Lihat struk</button>`}</td>
   </tr>`;
 }
 function listHtml(rows, hasAny) {
@@ -129,7 +131,7 @@ function footHtml(total, pages, from, to) {
 function shell() {
   return `
     <div class="pd-head">
-      <div><h1>Riwayat transaksi</h1><p>Penjualan simulasi selama sesi browser ini. Klik baris untuk membuka struk.</p></div>
+      <div><h1>Riwayat transaksi</h1><p>Transaksi tersimpan di database. Pembayaran online baru selesai setelah status Midtrans terverifikasi.</p></div>
       <span class="pd-pill"><span class="pd-pill-dot tx-dot"></span>${isManager() ? "Semua transaksi" : "Hanya transaksi saya"}</span>
     </div>
     <section class="pd-card pd-filters">
@@ -170,7 +172,7 @@ function paint(root) {
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));
 }
 
-function bind(root) {
+function bind(root, refresh) {
   if (root._txBound) return;
   root._txBound = true;
   root.addEventListener("click", (e) => {
@@ -181,6 +183,12 @@ function bind(root) {
         view.page = 1;
       } else view.page = +page.dataset.page;
       paint(root);
+      return;
+    }
+    const continueButton = e.target.closest('[data-act="continue"]');
+    if (continueButton) {
+      const sale = state.sales.find((item) => item.sale_id === continueButton.dataset.id);
+      if (sale) void continueSalePayment(sale, refresh);
       return;
     }
     const row = e.target.closest("tr[data-id]");
@@ -196,7 +204,7 @@ function bind(root) {
   });
 }
 
-export function transactions() {
+export function transactions(refresh = () => {}) {
   return {
     view: "template",
     css: "product-page",
@@ -205,7 +213,7 @@ export function transactions() {
     on: {
       onAfterRender() {
         paint(this.$view);
-        bind(this.$view);
+        bind(this.$view, refresh);
       },
     },
   };

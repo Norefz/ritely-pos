@@ -109,7 +109,30 @@ Karena itu, kasir berikutnya baru dapat membuka shift setelah shift aktif ditutu
 Penjualan dan jumlah transaksi shift dihitung saat diminta dari transaksi
 `completed`/`paid`, bukan disimpan sebagai total manual pada dokumen shift.
 
-Shift dan statusnya sudah tersimpan di backend. POS saat ini masih simulasi
-frontend, jadi belum membuat transaksi operasional `pending` atau `completed`;
-integrasi transaksi backend masih diperlukan agar agregasi penjualan terisi.
+Shift dan transaksi POS tersimpan di backend. Pembayaran tunai diselesaikan
+langsung saat checkout, sedangkan transaksi online menunggu verifikasi Midtrans
+Sandbox sebelum penjualan selesai dan stok dikurangi.
 
+# Midtrans Snap Sandbox
+
+Checkout tunai dan pembayaran online tersimpan di collection `sales`. Online memakai Midtrans Snap Sandbox; pembayaran hanya dianggap lunas setelah status diverifikasi backend melalui webhook atau status API Midtrans. Server Key tidak pernah dikirim ke browser.
+
+Isi konfigurasi berikut di `backend/.env` (jangan commit file `.env`):
+
+```dotenv
+MIDTRANS_SERVER_KEY=SB-Mid-server-...
+MIDTRANS_CLIENT_KEY=SB-Mid-client-...
+MIDTRANS_TIMEOUT_SECONDS=12
+```
+
+Ambil kedua key dari **Midtrans Dashboard → Settings → Access Keys → Sandbox**. Environment aplikasi ini menggunakan endpoint Sandbox; jangan masukkan key Production.
+
+Atur **Payment Notification URL** pada pengaturan Midtrans ke:
+
+```text
+https://<alamat-backend-publik>/api/payments/midtrans/notification
+```
+
+Untuk pengujian lokal `127.0.0.1`, webhook Midtrans tidak dapat menjangkau komputer secara langsung. Gunakan URL HTTPS publik/tunnel yang mengarah ke port backend `5000`, atau deploy backend terlebih dahulu. Setelah mengubah `.env`, restart backend. Di Kasir pilih **Online (Midtrans Sandbox)**; status pembayaran tetap diverifikasi backend dan tidak dipercaya dari redirect browser.
+
+Index collection `sales` akan dibuat otomatis saat checkout pertama. Seeder `catalog_products`/`initial` juga membuat index yang sama.

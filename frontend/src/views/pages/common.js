@@ -89,20 +89,26 @@ export function editor(title, elements, values, save) {
   win.show();
 }
 export function receipt(sale) {
+  const online = sale.payment_method === "online";
+  const isPaid = sale.payment_status === "paid";
+  const total = money(sale.total);
+  const cashLine = online
+    ? `<p>Metode pembayaran <b>Midtrans Sandbox</b></p><p>Status <b>${escape(isPaid ? "Lunas" : sale.payment_status || "Pending")}</b></p>`
+    : `<p>Metode pembayaran <b>Tunai</b></p><p>Uang diterima <b>${money(sale.cash)}</b></p><p>Kembalian <b>${money(sale.change ?? (sale.cash - sale.total))}</b></p>`;
   webix
     .ui({
       view: "window",
       modal: true,
       position: "center",
       width: Math.min(450, innerWidth - 24),
-      head: "Struk simulasi",
+      head: "Struk transaksi",
       body: {
         rows: [
           {
             view: "template",
             autoheight: true,
             css: "receipt",
-            template: `<h2>ritely.</h2><p>STRUK DEMO — BUKAN BUKTI PEMBAYARAN</p><p>${escape(sale.id)}<br>${date(sale.created_at)}</p>${sale.items.map((i) => `<p>${escape(i.name)} × ${i.quantity}<b>${money(i.price * i.quantity)}</b></p>`).join("")}<hr><h3>Total <b>${money(sale.total)}</b></h3><p>Tunai <b>${money(sale.cash)}</b></p><p>Kembalian <b>${money(sale.cash - sale.total)}</b></p>`,
+            template: `<h2>ritely.</h2><p>${escape(sale.id || sale.receipt_number)}<br>${date(sale.created_at)}</p>${sale.items.map((i) => `<p>${escape(i.name)} × ${i.quantity}<b>${money(i.price * i.quantity)}</b></p>`).join("")}<hr><h3>Total <b>${total}</b></h3>${cashLine}`,
           },
           {
             ...button("Tutup", function () {

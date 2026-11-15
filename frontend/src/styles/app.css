@@ -3538,6 +3538,12 @@ small {
 .ps-change strong {
   float: right;
 }
+.ps-online-note {
+  margin: 0;
+  color: #69778e;
+  font-size: 13px;
+  line-height: 1.45;
+}
 .ps-pay {
   height: 56px;
   border: 0;
@@ -3554,6 +3560,9 @@ small {
 }
 .ps-pay.idle {
   background: #9db4ee;
+}
+.ps-pay:disabled {
+  cursor: not-allowed;
 }
 .ps-pay:focus-visible,
 .ps-method:focus-visible {

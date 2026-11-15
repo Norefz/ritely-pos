@@ -1,4 +1,4 @@
-// Data simulasi frontend. Tidak tersambung ke akun, database, atau pembayaran.
+// Data aplikasi aktif; transaksi dan katalog dihidrasi dari backend.
 export const state = {
   role: "manager",
   currentUser: null,
@@ -7,6 +7,7 @@ export const state = {
   stockOpnames: [],
   cart: [],
   sales: [],
+  paymentOnlineEnabled: false,
   movements: [],
   categories: [
     { id: "c1", name: "Minuman" },

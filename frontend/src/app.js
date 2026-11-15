@@ -21,7 +21,9 @@ import {
   shiftsRequest,
   catalogRequest,
   stockOpnamesRequest,
+  salesRequest,
 } from "./api.js";
+import { loadPaymentConfig } from "./payments.js";
 let current = "dashboard";
 let shiftSyncTimer = null;
 let syncingShifts = false;
@@ -31,7 +33,7 @@ const factories = {
   categories: () => categories(refresh),
   stock: () => stock(refresh),
   pos: () => pos(refresh),
-  transactions,
+  transactions: () => transactions(refresh),
   shifts: () =>
     state.role === "cashier" ? myShifts(refresh) : shifts(refresh),
   reports,
@@ -193,12 +195,24 @@ async function hydrateStockOpnames() {
   }
 }
 
+async function hydrateSales() {
+  try {
+    const result = await salesRequest();
+    state.sales = result.sales || [];
+    state.salesLoadError = false;
+  } catch {
+    state.sales = [];
+    state.salesLoadError = true;
+  }
+}
+
 function clearOperationalData() {
   state.shift = null;
   state.shifts = [];
   state.categories = [];
   state.products = [];
   state.stockOpnames = [];
+  state.sales = [];
 }
 
 async function hydrateApplicationData() {
@@ -206,6 +220,8 @@ async function hydrateApplicationData() {
     hydrateShifts(),
     hydrateCatalog(),
     hydrateStockOpnames(),
+    hydrateSales(),
+    loadPaymentConfig(),
   ]);
 
   const status = $$("dataStatus");
@@ -214,7 +230,7 @@ async function hydrateApplicationData() {
       "template",
       state.catalogLoadError
         ? "Katalog gagal dimuat dari backend · Periksa koneksi, lalu muat ulang halaman."
-        : "Katalog, shift, dan stock opname terhubung ke backend · Transaksi POS masih simulasi.",
+        : `Katalog, shift, stok, dan transaksi terhubung ke backend · Pembayaran online ${state.paymentOnlineEnabled ? "Midtrans Sandbox siap" : "belum dikonfigurasi"}.`,
     );
     status.refresh();
   }

@@ -68,3 +68,39 @@ def ensure_indexes(database):
         [("submitted_by", 1), ("submitted_at", -1)],
         name="idx_stock_opnames_submitter_time",
     )
+
+    sales = database["sales"]
+    sales.create_index(
+        "receipt_number",
+        unique=True,
+        partialFilterExpression={"receipt_number": {"$type": "string"}},
+        name="uq_sales_receipt_number",
+    )
+    sales.create_index(
+        "client_request_id",
+        unique=True,
+        partialFilterExpression={"client_request_id": {"$type": "string"}},
+        name="uq_sales_client_request_id",
+    )
+    sales.create_index(
+        "payment_order_id",
+        unique=True,
+        partialFilterExpression={"payment_order_id": {"$type": "string"}},
+        name="uq_sales_payment_order_id",
+    )
+    sales.create_index(
+        "payment_reference",
+        unique=True,
+        partialFilterExpression={"payment_reference": {"$type": "string"}},
+        name="uq_sales_payment_reference",
+    )
+    sales.create_index([("shift_id", 1), ("status", 1)], name="idx_sales_shift_status")
+    sales.create_index(
+        [("payment_status", 1), ("payment_expired_at", 1)],
+        partialFilterExpression={"status": "pending"},
+        name="idx_sales_pending_expiry",
+    )
+    sales.create_index(
+        [("cashier_id", 1), ("created_at", -1)],
+        name="idx_sales_cashier_created",
+    )

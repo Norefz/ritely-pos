@@ -1,6 +1,7 @@
 import { state, money, total, uid, escape } from "../../state.js";
 import { receipt } from "./common.js";
-import { ApiError, openShiftRequest } from "../../api.js";
+import { ApiError, createSaleRequest, openShiftRequest } from "../../api.js";
+import { loadPaymentConfig, onlinePaymentsEnabled, openSnapPayment } from "../../payments.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
 
 const productImages = {
@@ -24,7 +25,7 @@ const productImages = {
 
 /* ---------- Kasir (POS): konfigurasi & helper ---------- */
 // Filter dan nominal tunai bertahan saat refresh() membangun ulang halaman.
-const view = { q: "", category: "all", cash: "" };
+const view = { q: "", category: "all", cash: "", paymentMethod: "cash", submitting: false, confirming: false };
 let scheduleTimer = null;
 const TONES = ["", "orange", "purple", "green"]; // warna avatar per urutan kategori
 
@@ -157,12 +158,13 @@ function shell() {
             <div class="ps-sum" data-part="sum"></div>
             <div class="ps-label">Metode pembayaran</div>
             <div class="ps-methods">
-              <button type="button" class="ps-method on" aria-pressed="true">Tunai</button>
-              <button type="button" class="ps-method" disabled title="Belum tersedia">Online (Midtrans)</button>
+              <button type="button" class="ps-method${view.paymentMethod === "cash" ? " on" : ""}" data-act="method" data-value="cash" aria-pressed="${view.paymentMethod === "cash"}">Tunai</button>
+              <button type="button" class="ps-method${view.paymentMethod === "online" ? " on" : ""}" data-act="method" data-value="online" aria-pressed="${view.paymentMethod === "online"}"${onlinePaymentsEnabled() ? "" : ' disabled title="Midtrans Sandbox belum dikonfigurasi di backend"'}>Online (Midtrans Sandbox)</button>
             </div>
-            <label class="ps-cash"><span>Uang diterima</span><input type="number" inputmode="numeric" min="0" placeholder="Nominal diterima" value="${escape(view.cash)}" /></label>
-            <div class="ps-change" data-part="change" aria-live="polite"></div>
-            <button type="button" class="ps-pay" data-act="pay"></button>
+            <label class="ps-cash"${view.paymentMethod === "online" ? " hidden" : ""}><span>Uang diterima</span><input type="number" inputmode="numeric" min="0" placeholder="Nominal diterima" value="${escape(view.cash)}" /></label>
+            <div class="ps-change" data-part="change" aria-live="polite"${view.paymentMethod === "online" ? " hidden" : ""}></div>
+            <p class="ps-online-note"${view.paymentMethod === "cash" ? " hidden" : ""}>Metode pembayaran tersedia mengikuti pengaturan Midtrans Sandbox.</p>
+            <button type="button" class="ps-pay" data-act="pay"${view.submitting || view.confirming ? " disabled" : ""}>${view.submitting ? "Menghubungkan…" : view.confirming ? "Menunggu konfirmasi…" : view.paymentMethod === "online" ? `Bayar online ${money(total())}` : `Bayar ${money(total())}`}</button>
           </div>
         </aside>
       </div>
@@ -174,6 +176,7 @@ function shell() {
 function paintChange(root) {
   const el = root.querySelector('[data-part="change"]');
   const input = root.querySelector(".ps-cash input");
+  if (view.paymentMethod !== "cash") return;
   if (!el || !input) return;
   if (input.value === "") {
     el.className = "ps-change";
@@ -197,10 +200,29 @@ function paint(root) {
   set("lines", linesHtml());
   set("count", `${state.cart.reduce((n, i) => n + i.quantity, 0)} item`);
   set("sum", sumHtml());
+  root.querySelectorAll(".ps-method").forEach((button) => {
+    const selected = button.dataset.value === view.paymentMethod;
+    button.classList.toggle("on", selected);
+    button.setAttribute("aria-pressed", String(selected));
+    if (button.dataset.value === "online") button.disabled = !onlinePaymentsEnabled();
+  });
+  const cashInput = root.querySelector(".ps-cash");
+  const change = root.querySelector('[data-part="change"]');
+  const onlineNote = root.querySelector(".ps-online-note");
+  if (cashInput) cashInput.hidden = view.paymentMethod !== "cash";
+  if (change) change.hidden = view.paymentMethod !== "cash";
+  if (onlineNote) onlineNote.hidden = view.paymentMethod !== "online";
   const pay = root.querySelector('[data-act="pay"]');
   if (pay) {
-    pay.textContent = `Bayar ${money(total())}`;
-    pay.classList.toggle("idle", !currentShift() || !state.cart.length);
+    pay.textContent = view.submitting
+      ? "Menghubungkan…"
+      : view.confirming
+        ? "Menunggu konfirmasi…"
+        : view.paymentMethod === "online"
+        ? `Bayar online ${money(total())}`
+        : `Bayar ${money(total())}`;
+    pay.disabled = view.submitting || view.confirming || !currentShift() || !state.cart.length || (view.paymentMethod === "online" && !onlinePaymentsEnabled());
+    pay.classList.toggle("idle", pay.disabled);
   }
   root.querySelectorAll(".ps-card").forEach((card) => {
     const badge = card.querySelector("[data-badge]");
@@ -235,6 +257,9 @@ function bind(root, actions) {
     if (el.dataset.act === "cat") {
       view.category = el.dataset.value;
       applyFilter(root);
+    } else if (el.dataset.act === "method") {
+      view.paymentMethod = el.dataset.value;
+      paint(root);
     } else actions[el.dataset.act]?.(root, el.dataset.id);
   });
   root.addEventListener("input", (e) => {
@@ -305,18 +330,24 @@ export function pos(refresh) {
       webix.message({ type: "error", text: message });
     }
   }
-  function pay(root) {
+  async function pay(root) {
     const cash = +(root.querySelector(".ps-cash input")?.value ?? 0);
     if (
       !currentShift() ||
       !state.cart.length ||
-      !Number.isFinite(cash) ||
-      cash < total()
+      (view.paymentMethod === "cash" && (!Number.isInteger(cash) || cash < total()))
     ) {
       webix.message({
         type: "error",
-        text: "Pastikan shift aktif, keranjang terisi, dan tunai mencukupi.",
+        text: view.paymentMethod === "cash"
+          ? "Pastikan shift aktif, keranjang terisi, dan tunai mencukupi."
+          : "Pastikan shift aktif dan keranjang terisi.",
       });
+      return;
+    }
+    if (view.submitting) return;
+    if (view.paymentMethod === "online" && !onlinePaymentsEnabled()) {
+      webix.message({ type: "error", text: "Pembayaran online belum dikonfigurasi pada backend." });
       return;
     }
     if (canCloseShift(shiftType(currentShift()))) {
@@ -335,39 +366,69 @@ export function pos(refresh) {
       });
       return;
     }
-    webix
-      .confirm(
-        "Selesaikan penjualan simulasi ini? Tidak ada pembayaran sungguhan.",
-      )
-      .then(() => {
-        if (!currentShift() || canCloseShift(shiftType(currentShift()))) {
-          webix.message({ type: "error", text: "Shift sudah berakhir atau tidak lagi aktif. Transaksi baru tidak dapat dibuat." });
-          return;
-        }
-        const sale = {
-          id: "DEMO-" + uid().slice(0, 8),
-          created_at: new Date().toISOString(),
-          paid_at: new Date().toISOString(),
+    const method = view.paymentMethod;
+    const proceed = async () => {
+      if (!currentShift() || canCloseShift(shiftType(currentShift()))) {
+        webix.message({ type: "error", text: "Shift sudah berakhir atau tidak lagi aktif. Transaksi baru tidak dapat dibuat." });
+        return;
+      }
+      view.submitting = true;
+      paint(root);
+      try {
+        const result = await createSaleRequest({
+          payment_method: method,
           shift_id: currentShift().id,
-          cashier: state.currentUser?.name || "Kasir",
-          payment_method: "cash",
-          items: state.cart.map((i) => ({ ...i })),
-          total: total(),
-          cash,
-          status: "completed",
-          payment_status: "paid",
-        };
-        sale.items.forEach(
-          (i) =>
-            (state.products.find((p) => p.id === i.id).stock -= i.quantity),
-        );
-        state.sales.push(sale);
+          client_request_id: uid(),
+          cash_received: method === "cash" ? Math.floor(cash) : undefined,
+          items: state.cart.map((item) => ({ product_id: item.id, quantity: item.quantity })),
+        });
+        const sale = result.sale;
+        state.sales.unshift(sale);
         state.cart = [];
         view.cash = "";
+        view.paymentMethod = "cash";
         refresh();
-        receipt(sale);
-      })
-      .catch(() => {});
+        if (method === "online") {
+          if (result.snap_token) await openSnapPayment(sale, result.snap_token, refresh);
+          else webix.message({ type: "error", text: "Sesi pembayaran belum tersedia. Periksa status transaksi di Riwayat transaksi." });
+        } else {
+          for (const item of sale.items) {
+            const product = state.products.find((row) => String(row.id) === String(item.product_id));
+            if (product) product.stock = Math.max(0, product.stock - item.quantity);
+          }
+          receipt(sale);
+        }
+      } catch (error) {
+        const message = error instanceof ApiError && error.code === "insufficient_stock"
+          ? "Stok berubah atau tidak mencukupi. Muat ulang katalog dan periksa keranjang."
+          : error instanceof ApiError && error.code === "payment_status_unknown"
+            ? "Status permintaan Midtrans belum diketahui. Periksa transaksi di Riwayat sebelum mencoba lagi."
+            : error instanceof ApiError && error.code === "payment_unavailable"
+              ? "Midtrans Sandbox belum dikonfigurasi di backend."
+              : error instanceof ApiError && error.message
+                ? error.message
+                : "Transaksi gagal disimpan. Periksa koneksi backend.";
+        webix.message({ type: "error", text: message });
+      } finally {
+        view.submitting = false;
+        if (!root.$destructed) paint(root);
+      }
+    };
+    if (method === "cash") {
+      view.confirming = true;
+      paint(root);
+      webix.confirm("Selesaikan transaksi tunai ini?")
+        .then(() => {
+          view.confirming = false;
+          return proceed();
+        })
+        .catch(() => {
+          view.confirming = false;
+          if (!root.$destructed) paint(root);
+        });
+    } else {
+      void proceed();
+    }
   }
   const actions = {
     add,
@@ -388,6 +449,9 @@ export function pos(refresh) {
         applyFilter(root);
         paint(root);
         bind(root, actions);
+        void loadPaymentConfig().then(() => {
+          if (!root.$destructed) paint(root);
+        });
         if (scheduleTimer) clearInterval(scheduleTimer);
         let previous = scheduleAvailability();
         scheduleTimer = setInterval(() => {

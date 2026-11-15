@@ -1,9 +1,11 @@
 """Business rules for opening, closing, and listing cashier shifts."""
 
 from datetime import datetime, time, timezone
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from bson import ObjectId
+from bson.decimal128 import Decimal128
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
@@ -60,6 +62,12 @@ def _as_store_local(value):
 
 
 def public_shift(document):
+    sales_total = document.get("sales_total", 0)
+    if isinstance(sales_total, Decimal128):
+        value = sales_total.to_decimal()
+        sales_total = int(value) if value == value.to_integral_value() else float(value)
+    elif isinstance(sales_total, Decimal):
+        sales_total = int(sales_total) if sales_total == sales_total.to_integral_value() else float(sales_total)
     return {
         "id": str(document["_id"]),
         "cashier_id": str(document["cashier_id"]),
@@ -76,7 +84,7 @@ def public_shift(document):
         "closed_by_role": document.get("closed_by_role"),
         "reason": document.get("close_reason", document.get("closing_reason", "")),
         "close_reason": document.get("close_reason", document.get("closing_reason", "")),
-        "sales_total": document.get("sales_total", 0),
+        "sales_total": sales_total,
         "transaction_count": document.get("transaction_count", 0),
     }
 

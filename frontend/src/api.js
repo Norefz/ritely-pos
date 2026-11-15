@@ -141,6 +141,32 @@ export async function submitStockOpnameRequest(data) {
   });
 }
 
+export async function paymentConfigRequest() {
+  return apiRequest("/api/payments/config");
+}
+
+export async function salesRequest() {
+  return apiRequest("/api/sales");
+}
+
+export async function createSaleRequest(data) {
+  return apiRequest("/api/sales", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function continuePaymentRequest(saleId) {
+  return apiRequest(`/api/sales/${encodeURIComponent(saleId)}/payment-session`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function refreshPaymentStatusRequest(saleId) {
+  return apiRequest(`/api/sales/${encodeURIComponent(saleId)}/payment-status`);
+}
+
 export function hasAccessToken() {
   return Boolean(accessToken);
 }
