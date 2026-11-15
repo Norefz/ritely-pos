@@ -161,7 +161,7 @@ function shell() {
               <button type="button" class="ps-method${view.paymentMethod === "cash" ? " on" : ""}" data-act="method" data-value="cash" aria-pressed="${view.paymentMethod === "cash"}">Tunai</button>
               <button type="button" class="ps-method${view.paymentMethod === "online" ? " on" : ""}" data-act="method" data-value="online" aria-pressed="${view.paymentMethod === "online"}"${onlinePaymentsEnabled() ? "" : ' disabled title="Midtrans Sandbox belum dikonfigurasi di backend"'}>Online (Midtrans Sandbox)</button>
             </div>
-            <label class="ps-cash"${view.paymentMethod === "online" ? " hidden" : ""}><span>Uang diterima</span><input type="number" inputmode="numeric" min="0" placeholder="Nominal diterima" value="${escape(view.cash)}" /></label>
+            <label class="ps-cash"${view.paymentMethod === "online" ? " hidden" : ""}><span>Uang diterima</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off" placeholder="Nominal diterima" value="${escape(view.cash)}" /></label>
             <div class="ps-change" data-part="change" aria-live="polite"${view.paymentMethod === "online" ? " hidden" : ""}></div>
             <p class="ps-online-note"${view.paymentMethod === "cash" ? " hidden" : ""}>Metode pembayaran tersedia mengikuti pengaturan Midtrans Sandbox.</p>
             <button type="button" class="ps-pay" data-act="pay"${view.submitting || view.confirming ? " disabled" : ""}>${view.submitting ? "Menghubungkan…" : view.confirming ? "Menunggu konfirmasi…" : view.paymentMethod === "online" ? `Bayar online ${money(total())}` : `Bayar ${money(total())}`}</button>
@@ -209,7 +209,11 @@ function paint(root) {
   const cashInput = root.querySelector(".ps-cash");
   const change = root.querySelector('[data-part="change"]');
   const onlineNote = root.querySelector(".ps-online-note");
-  if (cashInput) cashInput.hidden = view.paymentMethod !== "cash";
+  if (cashInput) {
+    cashInput.hidden = view.paymentMethod !== "cash";
+    const input = cashInput.querySelector("input");
+    if (input) input.disabled = view.paymentMethod !== "cash";
+  }
   if (change) change.hidden = view.paymentMethod !== "cash";
   if (onlineNote) onlineNote.hidden = view.paymentMethod !== "online";
   const pay = root.querySelector('[data-act="pay"]');
@@ -267,8 +271,16 @@ function bind(root, actions) {
       view.q = e.target.value;
       applyFilter(root);
     } else if (e.target.matches(".ps-cash input")) {
-      view.cash = e.target.value;
+      const digits = e.target.value.replace(/\D/g, "").slice(0, 12);
+      if (e.target.value !== digits) e.target.value = digits;
+      view.cash = digits;
       paintChange(root);
+    }
+  });
+  root.addEventListener("beforeinput", (e) => {
+    if (e.target.matches(".ps-cash input") && e.data && /\D/.test(e.data)
+      && e.inputType.startsWith("insert")) {
+      e.preventDefault();
     }
   });
 }
