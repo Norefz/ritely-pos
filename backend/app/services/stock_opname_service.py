@@ -19,10 +19,9 @@ def public_opname(document):
         "sku": document["sku"],
         "product_name": document["product_name"],
         "system_stock": document["system_stock"],
-        "counted_stock": document["counted_stock"],
+        "physical_stock": document["physical_stock"],
         "difference": document["difference"],
         "status": document["status"],
-        "note": document.get("note", ""),
         "submitted_by": str(document["submitted_by"]),
         "submitted_by_name": document["submitted_by_name"],
         "submitted_at": _isoformat(document["submitted_at"]),
@@ -51,16 +50,19 @@ def submit_opname(opnames, products, movements, data, user, session=None):
     if not product or not product.get("is_active", True):
         raise CatalogItemNotFoundError
 
-    counted_stock = _nonnegative_int(data.get("counted_stock"), "Hasil hitung fisik")
-    note = data.get("note", "")
-    if not isinstance(note, str):
-        raise ValueError("Catatan harus berupa teks.")
+    physical_stock = _nonnegative_int(data.get("physical_stock"), "Hasil hitung fisik")
 
     now = datetime.now(timezone.utc)
-    difference = counted_stock - product["stock"]
+    difference = physical_stock - product["stock"]
     updated_product = products.find_one_and_update(
         {"_id": product["_id"], "stock": product["stock"]},
-        {"$set": {"stock": counted_stock, "updated_at": now}},
+        {
+            "$set": {
+                "stock": physical_stock,
+                "physical_stock": physical_stock,
+                "updated_at": now,
+            }
+        },
         return_document=ReturnDocument.AFTER,
         session=session,
     )
@@ -84,10 +86,9 @@ def submit_opname(opnames, products, movements, data, user, session=None):
         "sku": product["sku"],
         "product_name": product["name"],
         "system_stock": product["stock"],
-        "counted_stock": counted_stock,
+        "physical_stock": physical_stock,
         "difference": difference,
         "status": "completed",
-        "note": note.strip(),
         "submitted_by": user["_id"],
         "submitted_by_name": user["name"],
         "submitted_at": now,

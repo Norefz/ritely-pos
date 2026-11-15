@@ -1985,23 +1985,55 @@ small {
   border-radius: 50%;
   background: #94a3b8;
 }
+.sk-c-product {
+  width: 21%;
+}
 .sk-c-cat {
-  width: 190px;
+  width: 14%;
 }
 .sk-c-lvl {
-  width: 260px;
+  width: 19%;
 }
 .sk-c-min {
-  width: 110px;
+  width: 8%;
 }
 .sk-c-status {
-  width: 130px;
+  width: 11%;
+}
+.sk-c-physical {
+  width: 12%;
 }
 .sk-c-act {
-  width: 190px;
+  width: 15%;
+}
+.sk-inventory-table {
+  min-width: 1200px;
+  table-layout: fixed;
+}
+.sk-inventory-table th.sk-c-act {
+  text-align: right;
+}
+.sk-inventory-table th.sk-c-physical,
+.sk-inventory-table td.sk-physical-value,
+.sk-inventory-table th.sk-c-min,
+.sk-inventory-table td.sk-min {
+  text-align: center;
 }
 .pd-edit {
   white-space: nowrap;
+}
+.sk-opname-submit {
+  padding: 0 14px;
+  font-size: 13px;
+}
+.sk-physical-value {
+  color: #15213b;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sk-opname-submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 .sk-prod b {
   display: block;
@@ -3229,12 +3261,10 @@ small {
   font-size: 13px;
 }
 .so-product b,
-.so-product small,
-.so-note {
+.so-product small {
   display: block;
 }
-.so-product small,
-.so-note {
+.so-product small {
   margin-top: 4px;
   color: #71809a;
   font-size: 12px;

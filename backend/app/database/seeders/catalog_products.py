@@ -52,6 +52,7 @@ PRODUCTS = (
     ("PRD-004", "Sikat gigi dewasa", "Perawatan diri", 9000, 17, 5),
     ("PRD-005", "Deodoran roll-on 50 ml", "Perawatan diri", 18000, 8, 4),
 )
+INITIAL_PHYSICAL_VARIANCE = {"MNM-001": -2, "BPO-001": 3}
 
 
 def validate_target():
@@ -106,6 +107,9 @@ def seed_catalog(database):
                     "category_id": category_ids[category],
                     "selling_price": Decimal128(Decimal(price)),
                     "stock": stock,
+                    "physical_stock": max(
+                        0, stock + INITIAL_PHYSICAL_VARIANCE.get(sku, 0)
+                    ),
                     "minimum_stock": minimum_stock,
                     "is_active": True,
                     "created_at": now,

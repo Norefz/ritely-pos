@@ -165,6 +165,7 @@ async function hydrateCatalog() {
       category: product.category_id,
       price: Number(product.selling_price),
       stock: product.stock,
+      physicalStock: product.physical_stock,
       minimum: product.minimum_stock,
       active: product.is_active,
     }));
@@ -177,6 +178,11 @@ async function hydrateCatalog() {
 }
 
 async function hydrateStockOpnames() {
+  if (state.role !== "manager") {
+    state.stockOpnames = [];
+    state.stockOpnameLoadError = false;
+    return;
+  }
   try {
     const result = await stockOpnamesRequest();
     state.stockOpnames = result.opnames || [];

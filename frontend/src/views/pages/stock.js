@@ -15,13 +15,10 @@ const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 const icons = {
   search: svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
-  pencil: svg(
-    '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
-  ),
+  pencil: svg('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'),
   prev: svg('<path d="m15 6-6 6 6 6"/>'),
   next: svg('<path d="m9 6 6 6-6 6"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
-  plus: svg('<path d="M12 5v14M5 12h14"/>'),
 };
 
 // Stok menipis = di bawah batas minimum (FR-24) atau habis.
@@ -42,6 +39,10 @@ function stockTag(p) {
   return lowStock(p)
     ? '<span class="stock-tag warning">Menipis</span>'
     : '<span class="stock-tag good">Aman</span>';
+}
+function physicalStock(p) {
+  if (Number.isInteger(p.physicalStock)) return p.physicalStock;
+  return p.stock;
 }
 function filtered() {
   const q = view.q.trim().toLowerCase();
@@ -99,21 +100,22 @@ function levelHtml(p) {
     <div class="sk-bar${lowStock(p) ? " low" : ""}"><i style="width:${fill.toFixed(0)}%"></i>${p.minimum > 0 ? `<u style="left:${mark.toFixed(0)}%"></u>` : ""}</div></div>`;
 }
 function rowHtml(p) {
-  const managerAction = state.role === "manager"
-    ? `<td class="pd-act"><button type="button" class="pd-edit" data-act="adjust" data-id="${escape(String(p.id))}" aria-label="Stock opname ${escape(p.name)}">${icons.pencil}Stock opname</button></td>`
-    : "";
+  const id = escape(String(p.id));
+  const name = escape(p.name);
+  const counted = physicalStock(p);
   return `<tr>
     <td><div class="pd-name"><i class="pd-av ${tone(p.category)}">${escape(initials(p.name))}</i>
       <div class="sk-prod"><b>${escape(p.name)}</b><small>${escape(p.sku)}</small></div></div></td>
     <td>${escape(categoryName(p.category))}</td>
     <td>${levelHtml(p)}</td>
-    <td class="pd-r sk-min">${p.minimum}</td>
+    <td class="sk-physical-value">${counted}</td>
+    <td class="sk-min">${p.minimum}</td>
     <td>${stockTag(p)}</td>
-    ${managerAction}
+    <td class="pd-act"><button type="button" class="pd-edit sk-opname-submit" data-act="opname-product" data-id="${id}" aria-label="Sesuaikan stok ${name}">${icons.pencil}Sesuaikan stok</button></td>
   </tr>`;
 }
 function listHtml(rows) {
-  const columns = state.role === "manager" ? 6 : 5;
+  const columns = 7;
   return rows.length
     ? rows.map(rowHtml).join("")
     : `<tr><td colspan="${columns}" class="pd-empty">Tidak ada produk yang cocok dengan pencarian atau filter ini.</td></tr>`;
@@ -149,19 +151,18 @@ function shell() {
           <td><div class="so-product"><b>${escape(opname.product_name)}</b><small>${escape(opname.sku)}</small></div></td>
           <td>${escape(opname.submitted_by_name)}</td>
           <td>${opname.system_stock}</td>
-          <td>${opname.counted_stock}</td>
+          <td>${opname.physical_stock}</td>
           <td><b class="so-difference${difference < 0 ? " negative" : difference > 0 ? " positive" : ""}">${delta}</b></td>
-          ${!isManager ? '<td><span class="state-tag good">Selesai</span></td>' : ""}
-          <td>${escape(date(opname.submitted_at))}${opname.note ? `<small class="so-note">Catatan: ${escape(opname.note)}</small>` : ""}</td>
+          <td>${escape(date(opname.submitted_at))}</td>
         </tr>`;
       }).join("")
-    : `<tr><td class="pd-empty" colspan="${isManager ? 6 : 7}">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
+    : `<tr><td class="pd-empty" colspan="6">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
   return `
     <div class="pd-head">
       <div><h1>Stok</h1><p>Pantau persediaan dan catat hasil hitung fisik.</p></div>
-      ${isManager ? `<div data-part="pill">${pillHtml()}</div>` : `<button type="button" class="pd-add" data-act="opname">${icons.plus}Catat hasil hitung</button>`}
+      ${isManager ? `<div data-part="pill">${pillHtml()}</div>` : ""}
     </div>
-    ${isManager ? "" : `<section class="pd-card so-intro">${icons.info}<div><b>Stock opname</b><p>Hitung jumlah fisik barang. Setelah disimpan, stok sistem langsung disesuaikan dan hasilnya masuk ke riwayat.</p></div></section>`}
+    ${isManager ? "" : `<section class="pd-card so-intro">${icons.info}<div><b>Stock opname</b><p>Hitung jumlah fisik barang. Setelah disimpan, stok sistem langsung disesuaikan.</p></div></section>`}
     <section class="pd-card pd-stats" data-part="stats">${statsHtml()}</section>
     <section class="pd-card pd-filters">
       <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nama atau SKU" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
@@ -170,24 +171,24 @@ function shell() {
     <section class="pd-card">
       <div class="pd-head stock-section-head"><div><h2>Persediaan produk</h2><p>Jumlah saat ini dibandingkan dengan batas minimum.</p></div></div>
       <div class="pd-scroll">
-        <table class="pd-table">
+        <table class="pd-table sk-inventory-table">
           <thead><tr>
-            <th>Produk</th><th class="sk-c-cat">Kategori</th><th class="sk-c-lvl">Stok tersedia</th>
-            <th class="sk-c-min pd-r">Minimum</th><th class="sk-c-status">Status</th>
-            ${isManager ? '<th class="sk-c-act"><span class="pd-sr">Aksi</span></th>' : ""}
+            <th class="sk-c-product">Produk</th><th class="sk-c-cat">Kategori</th><th class="sk-c-lvl">Stok sistem</th>
+            <th class="sk-c-physical">Stok fisik</th><th class="sk-c-min">Minimum</th>
+            <th class="sk-c-status">Status</th><th class="sk-c-act">Aksi</th>
           </tr></thead>
           <tbody data-part="list"></tbody>
         </table>
       </div>
       <div class="pd-foot" data-part="foot"></div>
     </section>
-    <section class="pd-card">
+    ${isManager ? `<section class="pd-card">
       <div class="pd-head stock-section-head"><div><h2>Riwayat stock opname</h2><p>Hitungan fisik langsung menyesuaikan stok dan tercatat di sini.</p></div></div>
       <div class="pd-scroll"><table class="pd-table so-table">
-        <thead><tr><th>Produk</th><th>${isManager ? "Petugas" : "Kasir"}</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th>${isManager ? "" : "<th>Status</th>"}<th>Waktu</th></tr></thead>
+        <thead><tr><th>Produk</th><th>Petugas</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th><th>Waktu</th></tr></thead>
         <tbody>${opnameRows}</tbody>
       </table></div>
-    </section>
+    </section>` : ""}
     <p class="pd-note">${icons.info}Garis penanda pada bar menunjukkan batas stok minimum.</p>`;
 }
 
@@ -209,66 +210,94 @@ function paint(root) {
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));
 }
 
-function submitOpname(refresh) {
-  const products = state.products.filter((product) => product.active);
-  if (!products.length) {
-    webix.message({ type: "error", text: "Belum ada produk aktif di database." });
-    return;
-  }
+function openOpname(product, refresh) {
+  if (!product) return;
+  const systemStock = product.stock;
+  const countedStock = physicalStock(product);
+  const formatDifference = (counted) => {
+    const difference = counted - systemStock;
+    return difference > 0 ? `+${difference}` : String(difference);
+  };
   editor(
-    "Catat hasil stock opname",
+    `Stock opname · ${product.name}`,
     [
       {
-        view: "richselect",
-        name: "product_id",
-        label: "Produk",
-        options: products.map((product) => ({
-          id: product.id,
-          value: `${product.name} · ${product.sku} · Sistem: ${product.stock}`,
-        })),
-        required: true,
+        view: "text",
+        name: "system_stock",
+        label: "Stok sistem saat ini",
+        readonly: true,
       },
       {
         view: "text",
-        name: "counted_stock",
-        label: "Jumlah fisik yang dihitung",
-        type: "number",
+        name: "physical_stock",
+        label: "Stok fisik",
         required: true,
+        attributes: { inputmode: "numeric", pattern: "[0-9]*" },
+        on: {
+          onChange(value) {
+            const raw = String(value ?? "").trim();
+            const counted = Number(raw);
+            const differenceField = $$("editorForm")?.elements?.difference;
+            if (differenceField) {
+              differenceField.setValue(
+                raw && Number.isInteger(counted) && counted >= 0
+                  ? formatDifference(counted)
+                  : "—",
+              );
+            }
+          },
+        },
       },
-      { view: "textarea", name: "note", label: "Catatan (opsional)" },
+      {
+        view: "text",
+        name: "difference",
+        label: "Selisih",
+        readonly: true,
+      },
     ],
-    { product_id: products[0].id, counted_stock: "" },
+    {
+      system_stock: systemStock,
+      physical_stock: String(countedStock),
+      difference: formatDifference(countedStock),
+    },
     async (values) => {
-      const counted = Number(values.counted_stock);
-      if (!Number.isInteger(counted) || counted < 0) {
-        webix.message({ type: "error", text: "Jumlah fisik harus bilangan bulat ≥ 0." });
+      const raw = String(values.physical_stock ?? "").trim();
+      const counted = Number(raw);
+      if (!raw || !Number.isInteger(counted) || counted < 0) {
+        webix.message({ type: "error", text: "Stok fisik harus bilangan bulat ≥ 0." });
         return false;
       }
       try {
         const result = await submitStockOpnameRequest({
-          product_id: values.product_id,
-          counted_stock: counted,
-          note: values.note || "",
+          product_id: product.id,
+          physical_stock: counted,
         });
-        state.stockOpnames.unshift(result.opname);
-        const product = state.products.find(
-          (item) => item.id === result.opname.product_id,
+        if (state.role === "manager") state.stockOpnames.unshift(result.opname);
+        const currentProduct = state.products.find(
+          (item) => String(item.id) === String(result.opname.product_id),
         );
-        if (product) product.stock = result.opname.counted_stock;
+        if (currentProduct) {
+          currentProduct.stock = result.opname.physical_stock;
+          currentProduct.physicalStock = result.opname.physical_stock;
+        }
         refresh();
-        webix.message("Stock opname tersimpan dan stok langsung disesuaikan.");
+        webix.message(`Stock opname tersimpan. Stok sistem sekarang ${result.opname.physical_stock}.`);
       } catch (error) {
-        const message = !(error instanceof ApiError)
-          ? "Stock opname gagal disimpan. Periksa koneksi backend."
-          : error.code === "database_unavailable"
-            ? "Database belum dapat dijangkau. Stok belum diubah."
-            : error.code === "stock_changed_retry"
-              ? "Stok berubah saat opname. Muat ulang halaman lalu hitung kembali."
-              : error.code === "product_not_found"
-                ? "Produk tidak aktif atau sudah tidak tersedia. Muat ulang halaman."
-                : error.status === 0
-                  ? "Backend tidak dapat dijangkau. Periksa koneksi lalu coba lagi."
-                  : error.message || "Stock opname gagal disimpan.";
+        let message = "Stock opname gagal disimpan.";
+        if (error instanceof ApiError) {
+          const knownErrors = {
+            stock_changed_retry: "Stok berubah dari sesi lain. Muat ulang lalu hitung kembali.",
+            database_unavailable: "Database belum dapat dijangkau. Periksa koneksi backend ke MongoDB.",
+            unsupported_stock_opname_fields: "Backend lokal masih memakai format lama. Restart backend lalu muat ulang halaman.",
+            product_not_found: "Produk sudah tidak tersedia. Muat ulang halaman.",
+            invalid_stock_opname: error.message,
+            unauthorized: "Sesi login tidak berlaku. Keluar lalu login kembali.",
+            forbidden: "Akun ini tidak memiliki akses stock opname.",
+            server_unreachable: "Backend tidak dapat dijangkau. Pastikan server lokal masih berjalan.",
+          };
+          message = knownErrors[error.code]
+            || `Stock opname gagal (HTTP ${error.status}${error.code ? ` · ${error.code}` : ""}).`;
+        }
         webix.message({ type: "error", text: message });
         return false;
       }
@@ -276,17 +305,17 @@ function submitOpname(refresh) {
   );
 }
 
-function bind(root, adjust, refresh) {
+function bind(root, refresh) {
   if (root._skBound) return;
   root._skBound = true;
   root.addEventListener("click", (e) => {
     const el = e.target.closest("[data-act]");
     if (!el || el.disabled) return;
     const act = el.dataset.act;
-    if (act === "opname")
-      return submitOpname(refresh);
-    if (act === "adjust")
-      return adjust(state.products.find((p) => String(p.id) === el.dataset.id));
+    if (act === "opname-product") {
+      const product = state.products.find((p) => String(p.id) === el.dataset.id);
+      return openOpname(product, refresh);
+    }
     if (act === "status") {
       view.status = el.dataset.value;
       view.page = 1;
@@ -304,62 +333,6 @@ function bind(root, adjust, refresh) {
 }
 
 export function stock(refresh) {
-  function adjust(p) {
-    if (!p) return;
-    editor(
-      `Stock opname · ${p.name}`,
-      [
-        {
-          view: "text",
-          name: "system_stock",
-          label: "Stok sistem saat ini",
-          readonly: true,
-        },
-        {
-          view: "text",
-          name: "counted_stock",
-          label: "Stok fisik",
-          type: "number",
-          required: true,
-        },
-        {
-          view: "textarea",
-          name: "note",
-          label: "Catatan (opsional)",
-        },
-      ],
-      { system_stock: p.stock, counted_stock: "", note: "" },
-      async (v) => {
-        const counted = Number(v.counted_stock);
-        if (!Number.isInteger(counted) || counted < 0) {
-          webix.message({
-            type: "error",
-            text: "Stok fisik harus bilangan bulat ≥ 0.",
-          });
-          return false;
-        }
-        try {
-          const result = await submitStockOpnameRequest({
-            product_id: p.id,
-            counted_stock: counted,
-            note: v.note || "",
-          });
-          state.stockOpnames.unshift(result.opname);
-          p.stock = result.opname.counted_stock;
-          refresh();
-          webix.message("Stock opname tersimpan dan stok langsung disesuaikan.");
-        } catch (error) {
-          const message = error instanceof ApiError && error.code === "stock_changed_retry"
-            ? "Stok berubah dari sesi lain. Muat ulang lalu coba lagi."
-            : error instanceof ApiError && error.code === "database_unavailable"
-              ? "Database belum dapat dijangkau."
-              : "Stock opname gagal disimpan.";
-          webix.message({ type: "error", text: message });
-          return false;
-        }
-      },
-    );
-  }
   return {
     view: "template",
     css: "product-page stock-page",
@@ -368,7 +341,7 @@ export function stock(refresh) {
     on: {
       onAfterRender() {
         paint(this.$view);
-        bind(this.$view, adjust, refresh);
+        bind(this.$view, refresh);
       },
     },
   };

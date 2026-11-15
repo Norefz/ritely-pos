@@ -318,14 +318,12 @@ def post_stock_adjustment(product_id):
 
 
 @catalog_bp.get("/stock-opnames")
+@manager_required
 def get_stock_opnames():
-    user, error = _current_user()
-    if error:
-        return error
     try:
         return jsonify(
             opnames=list_opnames(
-                get_stock_opnames_collection(), user
+                get_stock_opnames_collection(), g.current_user
             )
         ), 200
     except PyMongoError:
@@ -343,7 +341,7 @@ def post_stock_opname():
     data, error = _json_object()
     if error:
         return error
-    allowed = {"product_id", "counted_stock", "note"}
+    allowed = {"product_id", "physical_stock"}
     if set(data) - allowed:
         return jsonify(error="unsupported_stock_opname_fields"), 400
     try:
@@ -370,9 +368,8 @@ def post_stock_opname():
                     {
                         "product_id": ObjectId(opname["product_id"]),
                         "system_stock": opname["system_stock"],
-                        "counted_stock": opname["counted_stock"],
+                        "physical_stock": opname["physical_stock"],
                         "difference": opname["difference"],
-                        "note": opname["note"],
                     },
                 )
     except CatalogItemNotFoundError:

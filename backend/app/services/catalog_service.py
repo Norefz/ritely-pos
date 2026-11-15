@@ -75,6 +75,7 @@ def public_product(document):
         "category_id": str(document["category_id"]),
         "selling_price": str(price),
         "stock": document["stock"],
+        "physical_stock": document.get("physical_stock", document["stock"]),
         "minimum_stock": document["minimum_stock"],
         "is_active": document["is_active"],
         "created_at": _isoformat(document.get("created_at")),
@@ -173,6 +174,7 @@ def create_product(products, categories, data, session=None):
     document.update(
         {
             "stock": 0,
+            "physical_stock": 0,
             "created_at": now,
             "updated_at": now,
         }
@@ -218,6 +220,7 @@ def adjust_product_stock(products, product_id, target_stock, actor, session=None
         {
             "$set": {
                 "stock": target_stock,
+                "physical_stock": target_stock,
                 "updated_at": datetime.now(timezone.utc),
             }
         },
