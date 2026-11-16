@@ -92,6 +92,16 @@ function chipsHtml(all) {
     return `<button type="button" class="pd-chip${view.status === value ? " on" : ""}" data-act="status" data-value="${value}" aria-pressed="${view.status === value}">${value === "pending" ? '<span class="pd-dot"></span>' : ""}${label} <i>${count}</i></button>`;
   }).join("");
 }
+function statsHtml(all) {
+  if (!isManager()) return "";
+  const completedCount = all.filter(
+    (sale) => sale.status === "completed" && sale.payment_status === "paid",
+  ).length;
+  const pendingCount = all.filter((sale) => sale.status === "pending").length;
+  return `<div class="pd-card pd-stat"><span>Total transaksi</span><strong>${all.length}</strong></div>
+    <div class="pd-card pd-stat"><span>Selesai</span><strong>${completedCount}</strong></div>
+    <div class="pd-card pd-stat warn"><span>Menunggu pembayaran</span><strong>${pendingCount}</strong></div>`;
+}
 function rowHtml(s) {
   const first = s.items[0];
   const more = s.items.length - 1;
@@ -143,6 +153,7 @@ function shell() {
       <div><h1>Riwayat transaksi</h1><p>Transaksi tersimpan di database. Pembayaran online baru selesai setelah status Midtrans terverifikasi.</p></div>
       <span class="pd-pill"><span class="pd-pill-dot tx-dot"></span>${isManager() ? "Semua transaksi" : "Hanya transaksi saya"}</span>
     </div>
+    ${isManager() ? '<section class="tx-stats" data-part="stats"></section>' : ""}
     <section class="pd-card pd-filters">
       <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nomor struk atau produk" value="${escape(view.q)}" aria-label="Cari transaksi" autocomplete="off" /></label>
       <div class="pd-chips" data-part="chips" role="group" aria-label="Filter status transaksi"></div>
@@ -176,6 +187,7 @@ function paint(root) {
     const el = root.querySelector(`[data-part="${part}"]`);
     if (el) el.innerHTML = html;
   };
+  set("stats", statsHtml(all));
   set("chips", chipsHtml(all));
   set("list", listHtml(slice, all.length > 0));
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));

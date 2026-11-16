@@ -3,25 +3,7 @@ import { receipt } from "./common.js";
 import { ApiError, createSaleRequest, openShiftRequest } from "../../api.js";
 import { loadPaymentConfig, onlinePaymentsEnabled, openSnapPayment } from "../../payments.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
-
-const productImages = {
-  "Air mineral 600 ml":
-    "https://www.spiresmarket.com/cdn/shop/files/bc2482ea-0b41-49ed-b9e4-7826543c328f_c46380db-a575-422e-85ce-689c25c9327e.jpg?v=1736449123",
-  "Teh melati 350 ml":
-    "https://www.nongfuspring.com.my/cdn/shop/files/imgi_3_3d2cf06d020d4383b369f41a43cb23e5.png?format=webp&v=1775638029&width=600",
-  "Susu UHT cokelat 250 ml":
-    "https://cdnprod.mafretailproxy.com/sys-master-root/hf6/h1d/12463115927582/43287_Main.jpg_480Wx480H",
-  "Roti gandum":
-    "https://kibsecomimgstore.blob.core.windows.net/products/detail/HPL_SDBWHAEPD350LF_20250828171420.jpg",
-  "Biskuit kelapa 300 g":
-    "https://kuwait.grandhyper.com/image/cache/catalog/products/1/101060026235-1000x1000.jpg",
-  "Mi instan goreng":
-    "https://down-id.img.susercontent.com/file/1d4a20c87717dada5aec5749911f50a5",
-  "Tisu wajah 200 lembar":
-    "https://images.cdn.retail.brookshires.com/detail/00011225136566_C1C1.jpeg",
-  "Sabun cuci piring 750 ml":
-    "https://4.bp.blogspot.com/-jsdWrh0qoY4/UMHl4BlLfkI/AAAAAAAACcw/VoJfCV_wXWc/s1600/12158liquid_soap.jpg",
-};
+import { productImageStyle } from "../product-images.js";
 
 /* ---------- Kasir (POS): konfigurasi & helper ---------- */
 // Filter dan nominal tunai bertahan saat refresh() membangun ulang halaman.
@@ -69,10 +51,10 @@ function stockTag(p) {
 
 /* ---------- Potongan HTML ---------- */
 function cardHtml(p) {
-  const img = productImages[p.name];
+  const photoStyle = productImageStyle(p.sku);
   const label = escape(p.name);
   return `<button type="button" class="ps-card${p.stock <= 0 ? " out" : ""}" data-act="add" data-id="${escape(String(p.id))}" data-cat="${escape(String(p.category))}" data-search="${escape((p.name + " " + p.sku).toLowerCase())}" aria-label="Tambah ${label} ke keranjang">
-    <span class="ps-art ${tone(p)}"><b>${escape(initials(p.name))}</b>${img ? `<img src="${escape(img)}" alt="" loading="lazy" onload="this.classList.add('on')" onerror="this.remove()">` : ""}</span>
+    <span class="ps-art ${tone(p)}${photoStyle ? " has-photo" : ""}"><b>${escape(initials(p.name))}</b>${photoStyle ? `<i class="ps-product-image" style="${photoStyle}" role="img" aria-label="${label}"></i>` : ""}</span>
     <strong>${label}</strong>
     <span class="ps-price">${money(p.price)}</span>
     ${stockTag(p)}

@@ -6,6 +6,7 @@ import {
   createProductRequest,
   updateProductRequest,
 } from "../../api.js";
+import { productImageStyle } from "../product-images.js";
 
 /* ---------- Halaman Produk: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -98,9 +99,10 @@ function chipsHtml() {
   );
 }
 function rowHtml(p) {
+  const photoStyle = productImageStyle(p.sku);
   return `<tr>
     <td class="pd-sku">${escape(p.sku)}</td>
-    <td><div class="pd-name"><i class="pd-av ${tone(p.category)}">${escape(initials(p.name))}</i><b>${escape(p.name)}</b></div></td>
+    <td><div class="pd-name"><i class="pd-av ${tone(p.category)}${photoStyle ? " pd-product-photo" : ""}"${photoStyle ? ` style="${photoStyle}" role="img" aria-label="${escape(p.name)}"` : ""}>${photoStyle ? "" : escape(initials(p.name))}</i><b>${escape(p.name)}</b></div></td>
     <td>${escape(categoryName(p.category))}</td>
     <td class="pd-price">${money(p.price)}</td>
     <td><div class="pd-stock"><b>${p.stock}</b>${stockTag(p)}</div></td>

@@ -1823,6 +1823,13 @@ small {
   background: #e4f2df;
   color: #416f36;
 }
+.pd-product-photo {
+  background-image: url("../../assets/images/products.webp");
+  background-repeat: no-repeat;
+  background-size: 500% 500%;
+  background-position: var(--product-image-x) var(--product-image-y);
+  background-color: #fff;
+}
 .pd-stock {
   display: flex;
   align-items: center;
@@ -3199,12 +3206,27 @@ small {
   line-height: 1.5;
   color: #69778e;
 }
+.tx-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.tx-stats .pd-card {
+  margin-bottom: 0;
+}
+.tx-stats .pd-stat + .pd-stat {
+  border-left: 0;
+}
 @media (max-width: 1100px) {
   .au-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 640px) {
+  .tx-stats {
+    grid-template-columns: 1fr;
+  }
   .au-grid {
     grid-template-columns: 1fr;
   }
@@ -3401,6 +3423,26 @@ small {
 .ps-art.green {
   background: #e4f2df;
   color: #416f36;
+}
+.ps-art.has-photo {
+  background: #fff;
+}
+.ps-art.has-photo b {
+  display: none;
+}
+.ps-product-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 112px;
+  height: 112px;
+  transform: translate(-50%, -50%);
+  border-radius: 10px;
+  background-image: url("../../assets/images/products.webp");
+  background-repeat: no-repeat;
+  background-size: 500% 500%;
+  background-position: var(--product-image-x) var(--product-image-y);
+  background-color: #fff;
 }
 /* Inisial tetap terlihat sampai gambar benar-benar selesai dimuat. */
 .ps-art img {
