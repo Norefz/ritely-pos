@@ -43,7 +43,15 @@ const visible = () =>
   [...state.sales]
     .filter((s) => isManager() || s.cashier_id === state.currentUser?.id)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-const statusOf = (s) => STATUS[s.status] || { label: s.status, cls: "" };
+const statusOf = (s) => {
+  if (s.payment_cancellation_status === "unconfirmed") {
+    return { label: "Batal · cek Midtrans", cls: "warning" };
+  }
+  if (s.reconciliation_status === "pending" && s.payment_status === "paid") {
+    return { label: "Perlu rekonsiliasi", cls: "warning" };
+  }
+  return STATUS[s.status] || { label: s.status, cls: "" };
+};
 const columns = () => (isManager() ? 8 : 7);
 
 function filtered(all) {
@@ -196,7 +204,7 @@ function bind(root, refresh) {
     if (cancelButton) {
       const sale = state.sales.find((item) => item.sale_id === cancelButton.dataset.id);
       if (!sale) return;
-      void webix.confirm("Batalkan pesanan ini? Sesi pembayaran Midtrans juga akan dibatalkan.")
+      void webix.confirm("Batalkan pesanan ini? Jika Midtrans belum mengonfirmasi, pesanan tetap diblokir di Ritely dan ditandai untuk rekonsiliasi.")
         .then(async () => {
           cancelButton.disabled = true;
           try {
@@ -205,7 +213,14 @@ function bind(root, refresh) {
             if (index >= 0) state.sales[index] = result.sale;
             refresh();
             if (result.cancelled) {
-              webix.message("Pesanan berhasil dibatalkan.");
+              if (result.provider_cancelled === false) {
+                webix.message({
+                  type: "error",
+                  text: "Pesanan dibatalkan di Ritely, tetapi Midtrans belum mengonfirmasi. Jangan bayarkan pesanan ini.",
+                });
+              } else {
+                webix.message("Pesanan berhasil dibatalkan.");
+              }
             } else if (result.sale.status === "completed" || result.sale.payment_status === "paid") {
               webix.message({ type: "error", text: "Pembayaran sudah berhasil, pesanan tidak dapat dibatalkan." });
             } else if (result.sale.status === "expired" || result.sale.payment_status === "expired") {

@@ -128,6 +128,7 @@ def _public_sale(document):
         "paid_at": _iso(document.get("paid_at")),
         "payment_expired_at": _iso(document.get("payment_expired_at")),
         "reconciliation_status": document.get("reconciliation_status"),
+        "payment_cancellation_status": document.get("payment_cancellation_status"),
         "cash": _number(document["cash_received"]) if document.get("cash_received") is not None else 0,
         "change": _number(document["change"]) if document.get("change") is not None else 0,
     }
@@ -438,6 +439,15 @@ def _apply_provider_status(database, sale, payload, actor_id=None):
             if result.modified_count:
                 _audit(database, actor_id or sale["cashier_id"], "payment_cancelled", sale,
                        {"source": "midtrans", "payment_order_id": order_id})
+        elif sale.get("payment_cancellation_status") == "unconfirmed":
+            result = sales.update_one(
+                {"_id": sale["_id"], "status": "voided", "payment_cancellation_status": "unconfirmed"},
+                {"$set": {"payment_cancellation_status": "confirmed"},
+                 "$unset": {"reconciliation_status": ""}},
+            )
+            if result.modified_count:
+                _audit(database, actor_id or sale["cashier_id"], "sale_cancellation_confirmed", sale,
+                       {"source": "midtrans", "payment_order_id": order_id})
         return sales.find_one({"_id": sale["_id"]})
 
     if provider_status == "expired":
@@ -451,6 +461,15 @@ def _apply_provider_status(database, sale, payload, actor_id=None):
             )
             _audit(database, actor_id or sale["cashier_id"], "payment_expired", sale,
                    {"payment_order_id": order_id})
+        elif sale.get("payment_cancellation_status") == "unconfirmed":
+            result = sales.update_one(
+                {"_id": sale["_id"], "status": "voided", "payment_cancellation_status": "unconfirmed"},
+                {"$set": {"payment_cancellation_status": "confirmed"},
+                 "$unset": {"reconciliation_status": ""}},
+            )
+            if result.modified_count:
+                _audit(database, actor_id or sale["cashier_id"], "sale_cancellation_confirmed", sale,
+                       {"source": "midtrans_expiration", "payment_order_id": order_id})
         return sales.find_one({"_id": sale["_id"]})
 
     if provider_status == "paid":
@@ -464,10 +483,19 @@ def _apply_provider_status(database, sale, payload, actor_id=None):
                        {"payment_order_id": order_id, "incoming_status": "paid"})
                 return sale
             if _provider_state(verified) == "paid":
-                _audit(database, actor_id or sale["cashier_id"], "payment_late_detected", sale,
-                       {"payment_order_id": order_id, "payment_reference": reference,
-                        "reason": "provider_status_conflict_after_void"})
-            return sale
+                result = sales.update_one(
+                    {"_id": sale["_id"], "status": "voided", "payment_status": {"$ne": "paid"}},
+                    {"$set": {
+                        "payment_status": "paid",
+                        "reconciliation_status": "pending",
+                        **({"payment_reference": reference} if reference else {}),
+                    }},
+                )
+                if result.modified_count:
+                    _audit(database, actor_id or sale["cashier_id"], "payment_late_detected", sale,
+                           {"payment_order_id": order_id, "payment_reference": reference,
+                            "reason": "provider_status_conflict_after_void"})
+            return sales.find_one({"_id": sale["_id"]}) or sale
         # Late payments and payments arriving after a closed shift are held for reconciliation.
         shift = database["shifts"].find_one({"_id": sale["shift_id"]})
         if sale["status"] == "expired" or not shift or shift["status"] != "open":
@@ -740,6 +768,31 @@ def _mark_sale_cancelled(database, sale, user, provider=None):
     return database["sales"].find_one({"_id": sale["_id"]}) or sale
 
 
+def _force_cancel_sale(database, sale, user):
+    now = datetime.now(timezone.utc)
+    result = database["sales"].update_one(
+        {
+            "_id": sale["_id"],
+            "status": "pending",
+            "payment_status": {"$in": ["not_started", "pending", "unknown"]},
+        },
+        {"$set": {
+            "status": "voided",
+            "payment_status": "failed",
+            "void_reason": "Pesanan dibatalkan di Ritely; status Midtrans belum terkonfirmasi.",
+            "voided_by": user["_id"],
+            "voided_at": now,
+            "reconciliation_status": "pending",
+            "payment_cancellation_status": "unconfirmed",
+        }},
+    )
+    if result.modified_count:
+        _audit(database, user["_id"], "sale_force_cancelled", sale,
+               {"source": "user", "payment_order_id": sale.get("payment_order_id"),
+                "provider_confirmation": "unconfirmed"})
+    return database["sales"].find_one({"_id": sale["_id"]}) or sale
+
+
 @sales_bp.post("/sales/<sale_id>/cancel")
 def cancel_sale(sale_id):
     user, error = _authorized_user()
@@ -755,7 +808,11 @@ def cancel_sale(sale_id):
 
         if sale.get("payment_status") == "not_started" and not sale.get("snap_token"):
             cancelled_sale = _mark_sale_cancelled(database, sale, user)
-            return jsonify(sale=_public_sale(cancelled_sale), cancelled=cancelled_sale["status"] == "voided"), 200
+            return jsonify(
+                sale=_public_sale(cancelled_sale),
+                cancelled=cancelled_sale["status"] == "voided",
+                provider_cancelled=True,
+            ), 200
 
         def apply_matching_status(payload):
             if payload.get("order_id") != sale["payment_order_id"]:
@@ -765,6 +822,16 @@ def cancel_sale(sale_id):
                 )
                 return sale
             return _apply_provider_status(database, sale, payload, user["_id"])
+
+        def force_cancel_response():
+            cancelled_sale = _force_cancel_sale(database, sale, user)
+            is_cancelled = cancelled_sale["status"] == "voided"
+            return jsonify(
+                sale=_public_sale(cancelled_sale),
+                cancelled=is_cancelled,
+                provider_cancelled=False,
+                reconciliation_required=is_cancelled,
+            ), 200
 
         snap_session_cancelled = False
         if sale.get("snap_token"):
@@ -781,18 +848,30 @@ def cancel_sale(sale_id):
         except midtrans.MidtransNotFound:
             if snap_session_cancelled:
                 cancelled_sale = _mark_sale_cancelled(database, sale, user)
-                return jsonify(sale=_public_sale(cancelled_sale), cancelled=cancelled_sale["status"] == "voided"), 200
-            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+                return jsonify(
+                    sale=_public_sale(cancelled_sale),
+                    cancelled=cancelled_sale["status"] == "voided",
+                    provider_cancelled=True,
+                ), 200
+            return force_cancel_response()
         except midtrans.MidtransError:
-            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+            return force_cancel_response()
 
         provider_state = _provider_state(provider)
         if provider_state == "paid":
             updated_sale = apply_matching_status(provider)
+            if updated_sale["status"] == "pending":
+                return force_cancel_response()
             return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
         if provider_state != "pending":
             updated_sale = apply_matching_status(provider)
-            return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
+            if updated_sale["status"] == "pending":
+                return force_cancel_response()
+            return jsonify(
+                sale=_public_sale(updated_sale),
+                cancelled=updated_sale["status"] == "voided",
+                provider_cancelled=True,
+            ), 200
 
         try:
             cancelled = midtrans.cancel_transaction(sale["payment_order_id"])
@@ -823,6 +902,7 @@ def cancel_sale(sale_id):
                 return jsonify(
                     sale=_public_sale(cancelled_sale),
                     cancelled=cancelled_sale["status"] == "voided",
+                    provider_cancelled=True,
                 ), 200
 
         try:
@@ -833,17 +913,21 @@ def cancel_sale(sale_id):
                 return jsonify(
                     sale=_public_sale(cancelled_sale),
                     cancelled=cancelled_sale["status"] == "voided",
+                    provider_cancelled=True,
                 ), 200
-            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+            return force_cancel_response()
         except midtrans.MidtransError:
-            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+            return force_cancel_response()
 
         latest_state = _provider_state(latest)
         if latest_state != "pending":
             updated_sale = apply_matching_status(latest)
+            if updated_sale["status"] == "pending":
+                return force_cancel_response()
             return jsonify(
                 sale=_public_sale(updated_sale),
                 cancelled=updated_sale["status"] == "voided",
+                provider_cancelled=True,
             ), 200
 
         # Some payment channels reject Cancel while the transaction is pending.
@@ -855,7 +939,7 @@ def cancel_sale(sale_id):
                 "Midtrans could not cancel or expire sale %s (status %s)",
                 sale["receipt_number"], provider_error.status_code or "unknown",
             )
-            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+            return force_cancel_response()
 
         if (
             expired.get("transaction_status", "").lower() == "expire"
@@ -873,12 +957,16 @@ def cancel_sale(sale_id):
             return jsonify(
                 sale=_public_sale(cancelled_sale),
                 cancelled=cancelled_sale["status"] == "voided",
+                provider_cancelled=True,
             ), 200
 
         updated_sale = apply_matching_status(expired)
+        if updated_sale["status"] == "pending":
+            return force_cancel_response()
         return jsonify(
             sale=_public_sale(updated_sale),
             cancelled=updated_sale["status"] == "voided",
+            provider_cancelled=True,
         ), 200
     except CheckoutError as error:
         return jsonify(error=error.code, message=str(error)), error.status
