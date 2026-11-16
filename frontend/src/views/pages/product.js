@@ -6,7 +6,7 @@ import {
   createProductRequest,
   updateProductRequest,
 } from "../../api.js";
-import { productImageStyle } from "../product-images.js";
+import { productImageUrl } from "../product-images.js";
 
 /* ---------- Halaman Produk: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -99,10 +99,13 @@ function chipsHtml() {
   );
 }
 function rowHtml(p) {
-  const photoStyle = productImageStyle(p.sku);
+  const photoUrl = p.imageUrl || productImageUrl(p.sku);
+  const photo = photoUrl
+    ? `<img src="${escape(photoUrl)}" alt="" loading="lazy" onerror="this.remove()">`
+    : "";
   return `<tr>
     <td class="pd-sku">${escape(p.sku)}</td>
-    <td><div class="pd-name"><i class="pd-av ${tone(p.category)}${photoStyle ? " pd-product-photo" : ""}"${photoStyle ? ` style="${photoStyle}" role="img" aria-label="${escape(p.name)}"` : ""}>${photoStyle ? "" : escape(initials(p.name))}</i><b>${escape(p.name)}</b></div></td>
+    <td><div class="pd-name"><i class="pd-av ${tone(p.category)}${photo ? " pd-product-photo" : ""}" aria-hidden="true">${photo}${escape(initials(p.name))}</i><b>${escape(p.name)}</b></div></td>
     <td>${escape(categoryName(p.category))}</td>
     <td class="pd-price">${money(p.price)}</td>
     <td><div class="pd-stock"><b>${p.stock}</b>${stockTag(p)}</div></td>
@@ -162,6 +165,34 @@ function shell() {
       <div class="pd-foot" data-part="foot"></div>
     </section>
     <p class="pd-note">${icons.info}Perubahan harga tidak mengubah histori transaksi.</p>`;
+}
+
+function numericField(name, label) {
+  return {
+    view: "text",
+    name,
+    label,
+    type: "number",
+    required: true,
+    attributes: { inputmode: "numeric", min: "0", step: "1", pattern: "[0-9]*" },
+    on: {
+      onKeyPress(code, event) {
+        if (event.ctrlKey || event.metaKey || event.altKey) return true;
+        if (
+          (code >= 48 && code <= 57) ||
+          (code >= 96 && code <= 105) ||
+          [8, 9, 13, 35, 36, 37, 39, 46].includes(code)
+        ) return true;
+        return false;
+      },
+      onTimedKeyPress() {
+        const input = this.getInputNode();
+        if (!input) return;
+        const digits = input.value.replace(/\D/g, "");
+        if (input.value !== digits) this.setValue(digits);
+      },
+    },
+  };
 }
 
 // Mengisi ulang bagian yang berubah tanpa merender ulang kolom pencarian (fokus tetap).
@@ -243,19 +274,15 @@ export function products(refresh) {
             .map((category) => ({ id: category.id, value: category.name })),
           required: true,
         },
+        numericField("price", "Harga jual (Rp)"),
+        numericField("minimum", "Batas stok minimum"),
         {
           view: "text",
-          name: "price",
-          label: "Harga jual (Rp)",
-          type: "number",
-          required: true,
-        },
-        {
-          view: "text",
-          name: "minimum",
-          label: "Batas stok minimum",
-          type: "number",
-          required: true,
+          name: "imageUrl",
+          label: "URL gambar produk (HTTPS, opsional)",
+          placeholder: "https://contoh.com/gambar-produk.webp",
+          type: "url",
+          attributes: { inputmode: "url" },
         },
         {
           view: "checkbox",
@@ -269,15 +296,20 @@ export function products(refresh) {
         if (
           !v.name.trim() ||
           !v.sku.trim() ||
-          !Number.isFinite(+v.price) ||
-          +v.price < 0 ||
-          !Number.isInteger(+v.minimum) ||
-          +v.minimum < 0
+          !/^\d+$/.test(String(v.price ?? "")) ||
+          !Number.isSafeInteger(Number(v.price)) ||
+          !/^\d+$/.test(String(v.minimum ?? "")) ||
+          !Number.isSafeInteger(Number(v.minimum))
         ) {
           webix.message({
             type: "error",
             text: "Isi nama, SKU, harga dan batas stok dengan benar.",
           });
+          return false;
+        }
+        const imageUrl = String(v.imageUrl || "").trim();
+        if (imageUrl && !/^https:\/\//i.test(imageUrl)) {
+          webix.message({ type: "error", text: "URL gambar harus menggunakan HTTPS." });
           return false;
         }
         if (
@@ -293,6 +325,7 @@ export function products(refresh) {
           selling_price: +v.price,
           minimum_stock: +v.minimum,
           is_active: !!+v.active,
+          image_url: imageUrl,
         };
         try {
           const result = product.id
@@ -308,6 +341,7 @@ export function products(refresh) {
             stock: saved.stock,
             minimum: saved.minimum_stock,
             active: saved.is_active,
+            imageUrl: saved.image_url || "",
           };
           if (product.id)
             state.products = state.products.map((item) =>

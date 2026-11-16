@@ -170,6 +170,7 @@ async function hydrateCatalog() {
       physicalStock: product.physical_stock,
       minimum: product.minimum_stock,
       active: product.is_active,
+      imageUrl: product.image_url || "",
     }));
     state.catalogLoadError = false;
   } catch {

@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlparse
 
 from bson import Decimal128, ObjectId
 from pymongo import ReturnDocument
@@ -50,6 +51,26 @@ def _selling_price(value):
     return bson_price
 
 
+def _image_url(value):
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError("URL gambar harus berupa teks.")
+    image_url = value.strip()
+    if len(image_url) > 2048:
+        raise ValueError("URL gambar terlalu panjang.")
+    if image_url:
+        parsed = urlparse(image_url)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+        ):
+            raise ValueError("URL gambar harus berupa URL HTTPS yang valid.")
+    return image_url
+
+
 def _category_id(value):
     if not ObjectId.is_valid(value):
         raise ValueError("category_id tidak valid.")
@@ -82,6 +103,7 @@ def public_product(document, physical_stock=None):
         ),
         "minimum_stock": document["minimum_stock"],
         "is_active": document["is_active"],
+        "image_url": document.get("image_url", ""),
         "created_at": _isoformat(document.get("created_at")),
         "updated_at": _isoformat(document.get("updated_at")),
     }
@@ -134,6 +156,8 @@ def _validated_product_fields(data, categories, creating=False):
         fields["minimum_stock"] = _nonnegative_int(
             data.get("minimum_stock"), "Stok minimum"
         )
+    if creating or "image_url" in data:
+        fields["image_url"] = _image_url(data.get("image_url", ""))
     if "is_active" in data or creating:
         active = data.get("is_active", True)
         if not isinstance(active, bool):
@@ -194,7 +218,7 @@ def create_product(products, categories, data, session=None):
 def update_product(products, categories, product_id, data, session=None):
     if not ObjectId.is_valid(product_id):
         raise CatalogItemNotFoundError
-    allowed = {"name", "sku", "category_id", "selling_price", "minimum_stock", "is_active"}
+    allowed = {"name", "sku", "category_id", "selling_price", "minimum_stock", "is_active", "image_url"}
     if set(data) - allowed:
         raise ValueError("Field produk tidak didukung.")
     updates = _validated_product_fields(data, categories)
