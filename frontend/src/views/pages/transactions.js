@@ -206,10 +206,15 @@ function bind(root, refresh) {
             refresh();
             if (result.cancelled) {
               webix.message("Pesanan berhasil dibatalkan.");
-            } else if (result.sale.status === "completed") {
+            } else if (result.sale.status === "completed" || result.sale.payment_status === "paid") {
               webix.message({ type: "error", text: "Pembayaran sudah berhasil, pesanan tidak dapat dibatalkan." });
+            } else if (result.sale.status === "expired" || result.sale.payment_status === "expired") {
+              webix.message("Pembayaran sudah kedaluwarsa. Status pesanan diperbarui.");
+            } else if (result.sale.status === "voided") {
+              webix.message("Pesanan sudah dibatalkan dan statusnya diperbarui.");
             } else {
-              webix.message({ type: "error", text: "Pesanan belum dapat dibatalkan. Status pembayaran diperbarui." });
+              cancelButton.disabled = false;
+              webix.message({ type: "error", text: "Status pembayaran masih menunggu konfirmasi Midtrans. Coba lagi sebentar." });
             }
           } catch (error) {
             cancelButton.disabled = false;
