@@ -10,10 +10,15 @@ export function productImageStyle(sku) {
   const match = /^(MNM|MKN|BPO|RMH|PRD)-(\d{3})$/.exec(String(sku || ""));
   if (!match) return "";
   const rowStart = SHEET_ROW_START[match[1]];
-  const categoryIndex = Number(match[2]) - 1;
-  if (categoryIndex < 0 || categoryIndex > 4) return "";
+  const skuIndex = Number(match[2]) - 1;
+  if (skuIndex < 0 || skuIndex > 9) return "";
+  const sheet = Math.floor(skuIndex / 5);
+  const categoryIndex = skuIndex % 5;
   const index = rowStart + categoryIndex;
   const column = index % 5;
   const row = Math.floor(index / 5);
-  return `--product-image-x:${column * 25}%;--product-image-y:${row * 25}%;`;
+  const imagePath = sheet
+    ? "/assets/images/products-2.webp"
+    : "/assets/images/products.webp";
+  return `--product-image-x:${column * 25}%;--product-image-y:${row * 25}%;--product-image-url:url("${imagePath}");`;
 }

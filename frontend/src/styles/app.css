@@ -1824,7 +1824,7 @@ small {
   color: #416f36;
 }
 .pd-product-photo {
-  background-image: url("../../assets/images/products.webp");
+  background-image: var(--product-image-url, url("../../assets/images/products.webp"));
   background-repeat: no-repeat;
   background-size: 500% 500%;
   background-position: var(--product-image-x) var(--product-image-y);
@@ -3438,7 +3438,7 @@ small {
   height: 112px;
   transform: translate(-50%, -50%);
   border-radius: 10px;
-  background-image: url("../../assets/images/products.webp");
+  background-image: var(--product-image-url, url("../../assets/images/products.webp"));
   background-repeat: no-repeat;
   background-size: 500% 500%;
   background-position: var(--product-image-x) var(--product-image-y);
