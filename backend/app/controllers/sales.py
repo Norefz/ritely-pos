@@ -645,6 +645,118 @@ def continue_payment(sale_id):
         return jsonify(error="database_unavailable"), 503
 
 
+def _mark_sale_cancelled(database, sale, user, provider=None):
+    now = datetime.now(timezone.utc)
+    updates = {
+        "status": "voided",
+        "payment_status": "failed",
+        "void_reason": "Pesanan dibatalkan oleh pengguna.",
+        "voided_by": user["_id"],
+        "voided_at": now,
+    }
+    if provider and provider.get("transaction_id"):
+        updates["payment_reference"] = provider["transaction_id"]
+    result = database["sales"].update_one(
+        {
+            "_id": sale["_id"],
+            "status": "pending",
+            "payment_status": {"$in": ["not_started", "pending", "unknown"]},
+        },
+        {"$set": updates},
+    )
+    if result.modified_count:
+        _audit(database, user["_id"], "sale_cancelled", sale,
+               {"source": "user", "payment_order_id": sale.get("payment_order_id")})
+    return database["sales"].find_one({"_id": sale["_id"]}) or sale
+
+
+@sales_bp.post("/sales/<sale_id>/cancel")
+def cancel_sale(sale_id):
+    user, error = _authorized_user()
+    if error:
+        return error
+    try:
+        _client, database = _database()
+        sale = _sale_access(database, sale_id, user)
+        if sale["payment_method"] != "online" or sale["status"] != "pending":
+            return jsonify(error="sale_not_pending", sale=_public_sale(sale)), 409
+        if sale.get("payment_status") == "creating":
+            return jsonify(error="payment_session_creating", sale=_public_sale(sale)), 409
+
+        if sale.get("payment_status") == "not_started" and not sale.get("snap_token"):
+            cancelled_sale = _mark_sale_cancelled(database, sale, user)
+            return jsonify(sale=_public_sale(cancelled_sale), cancelled=cancelled_sale["status"] == "voided"), 200
+
+        snap_session_cancelled = False
+        if sale.get("snap_token"):
+            try:
+                midtrans.cancel_snap_session(sale["snap_token"])
+                snap_session_cancelled = True
+            except midtrans.MidtransError as error:
+                # A missing token is already unusable; other errors may mean the
+                # customer is completing payment, so verify transaction status below.
+                snap_session_cancelled = error.status_code == 404
+
+        try:
+            provider = midtrans.get_transaction_status(sale["payment_order_id"])
+        except midtrans.MidtransNotFound:
+            if snap_session_cancelled:
+                cancelled_sale = _mark_sale_cancelled(database, sale, user)
+                return jsonify(sale=_public_sale(cancelled_sale), cancelled=cancelled_sale["status"] == "voided"), 200
+            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+        except midtrans.MidtransError:
+            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+
+        provider_state = _provider_state(provider)
+        if provider_state == "paid":
+            updated_sale = _apply_provider_status(database, sale, provider, user["_id"])
+            return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
+        if provider_state != "pending":
+            updated_sale = _apply_provider_status(database, sale, provider, user["_id"])
+            return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
+
+        try:
+            cancelled = midtrans.cancel_transaction(sale["payment_order_id"])
+        except midtrans.MidtransError:
+            try:
+                latest = midtrans.get_transaction_status(sale["payment_order_id"])
+                updated_sale = _apply_provider_status(database, sale, latest, user["_id"])
+            except midtrans.MidtransNotFound:
+                updated_sale = (
+                    _mark_sale_cancelled(database, sale, user)
+                    if snap_session_cancelled else sale
+                )
+            except midtrans.MidtransError:
+                updated_sale = sale
+            return jsonify(
+                sale=_public_sale(updated_sale),
+                cancelled=updated_sale["status"] == "voided",
+            ), 200
+
+        if (
+            cancelled.get("transaction_status") == "cancel"
+            and cancelled.get("order_id") == sale["payment_order_id"]
+        ):
+            amount = cancelled.get("gross_amount")
+            if amount is not None:
+                try:
+                    amount_matches = Decimal(str(amount)) == _decimal(sale["total"])
+                except InvalidOperation:
+                    amount_matches = False
+                if not amount_matches:
+                    raise CheckoutError("payment_amount_mismatch", 400)
+            cancelled_sale = _mark_sale_cancelled(database, sale, user, cancelled)
+            return jsonify(sale=_public_sale(cancelled_sale), cancelled=cancelled_sale["status"] == "voided"), 200
+
+        updated_sale = _apply_provider_status(database, sale, cancelled, user["_id"])
+        return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
+    except CheckoutError as error:
+        return jsonify(error=error.code, message=str(error)), error.status
+    except PyMongoError:
+        current_app.logger.exception("Could not cancel pending sale")
+        return jsonify(error="database_unavailable"), 503
+
+
 @sales_bp.get("/sales/<sale_id>/payment-status")
 def refresh_payment_status(sale_id):
     user, error = _authorized_user()

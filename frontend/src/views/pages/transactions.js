@@ -1,5 +1,6 @@
 import { state, money, date, escape } from "../../state.js";
 import { receipt } from "./common.js";
+import { cancelSaleRequest } from "../../api.js";
 import { continueSalePayment } from "../../payments.js";
 
 /* ---------- Riwayat transaksi: konfigurasi & helper ---------- */
@@ -97,7 +98,7 @@ function rowHtml(s) {
     <td><span class="tx-method${online ? " online" : ""}">${icons.wallet}${online ? "Online" : "Tunai"}</span></td>
     <td class="pd-r tx-total">${money(s.total)}</td>
     <td><span class="stock-tag ${st.cls}">${escape(st.label)}</span></td>
-    <td class="pd-act">${pending && online ? `<button type="button" class="pd-edit" data-act="continue" data-id="${escape(String(s.sale_id))}" aria-label="Lanjutkan pembayaran ${escape(s.id)}">Lanjutkan pembayaran</button>` : `<button type="button" class="pd-edit" data-act="open" data-id="${escape(String(s.id))}" aria-label="Lihat struk ${escape(s.id)}">${icons.receipt}Lihat struk</button>`}</td>
+    <td class="pd-act">${pending && online ? `<div class="tx-actions"><button type="button" class="pd-edit" data-act="continue" data-id="${escape(String(s.sale_id))}" aria-label="Lanjutkan pembayaran ${escape(s.id)}">Lanjutkan pembayaran</button><button type="button" class="pd-edit tx-cancel" data-act="cancel" data-id="${escape(String(s.sale_id))}" aria-label="Batalkan pesanan ${escape(s.id)}">Batalkan pesanan</button></div>` : `<button type="button" class="pd-edit" data-act="open" data-id="${escape(String(s.id))}" aria-label="Lihat struk ${escape(s.id)}">${icons.receipt}Lihat struk</button>`}</td>
   </tr>`;
 }
 function listHtml(rows, hasAny) {
@@ -189,6 +190,33 @@ function bind(root, refresh) {
     if (continueButton) {
       const sale = state.sales.find((item) => item.sale_id === continueButton.dataset.id);
       if (sale) void continueSalePayment(sale, refresh);
+      return;
+    }
+    const cancelButton = e.target.closest('[data-act="cancel"]');
+    if (cancelButton) {
+      const sale = state.sales.find((item) => item.sale_id === cancelButton.dataset.id);
+      if (!sale) return;
+      void webix.confirm("Batalkan pesanan ini? Sesi pembayaran Midtrans juga akan dibatalkan.")
+        .then(async () => {
+          cancelButton.disabled = true;
+          try {
+            const result = await cancelSaleRequest(sale.sale_id);
+            const index = state.sales.findIndex((item) => item.sale_id === result.sale.sale_id);
+            if (index >= 0) state.sales[index] = result.sale;
+            refresh();
+            if (result.cancelled) {
+              webix.message("Pesanan berhasil dibatalkan.");
+            } else if (result.sale.status === "completed") {
+              webix.message({ type: "error", text: "Pembayaran sudah berhasil, pesanan tidak dapat dibatalkan." });
+            } else {
+              webix.message({ type: "error", text: "Pesanan belum dapat dibatalkan. Status pembayaran diperbarui." });
+            }
+          } catch (error) {
+            cancelButton.disabled = false;
+            webix.message({ type: "error", text: error?.message || "Pesanan gagal dibatalkan. Coba lagi." });
+          }
+        })
+        .catch(() => {});
       return;
     }
     const row = e.target.closest("tr[data-id]");

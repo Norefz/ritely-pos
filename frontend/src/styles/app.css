@@ -1859,6 +1859,25 @@ small {
 .pd-act {
   text-align: right;
 }
+.tx-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.tx-actions .pd-edit {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.pd-edit.tx-cancel {
+  border-color: #f0d1ce;
+  color: #b42318;
+}
+.pd-edit.tx-cancel:hover {
+  border-color: #e7aaa4;
+  background: #fff7f6;
+}
 .pd-edit {
   display: inline-flex;
   align-items: center;

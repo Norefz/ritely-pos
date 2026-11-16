@@ -116,6 +116,42 @@ def get_transaction_status(order_id):
     return _request(url)
 
 
+def cancel_transaction(order_id):
+    url = "https://api.sandbox.midtrans.com/v2/" + quote(order_id, safe="") + "/cancel"
+    return _request(url, "POST", {})
+
+
+def cancel_snap_session(token):
+    server_key = current_app.config.get("MIDTRANS_SERVER_KEY", "")
+    if not server_key:
+        raise MidtransError("Midtrans Sandbox belum dikonfigurasi.")
+    url = "https://app.sandbox.midtrans.com/snap/v1/transactions/" + quote(token, safe="") + "/cancel"
+    request = Request(
+        url,
+        data=b"{}",
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": server_key,
+        },
+    )
+    try:
+        with urlopen(
+            request,
+            timeout=current_app.config.get("MIDTRANS_TIMEOUT_SECONDS", 12),
+        ) as response:
+            payload = json.loads(response.read().decode())
+            return payload
+    except HTTPError as error:
+        error.read()
+        raise MidtransError("Sesi pembayaran Midtrans tidak dapat dibatalkan.", status_code=error.code) from None
+    except (TimeoutError, URLError, OSError) as error:
+        raise MidtransError("Hasil pembatalan sesi Midtrans belum diketahui.", uncertain=True) from error
+    except (ValueError, json.JSONDecodeError) as error:
+        raise MidtransError("Respons pembatalan Midtrans tidak dapat dibaca.", uncertain=True) from error
+
+
 def verify_notification_signature(payload):
     import hashlib
     import hmac

@@ -163,6 +163,13 @@ export async function continuePaymentRequest(saleId) {
   });
 }
 
+export async function cancelSaleRequest(saleId) {
+  return apiRequest(`/api/sales/${encodeURIComponent(saleId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 export async function refreshPaymentStatusRequest(saleId, verifyProvider = false) {
   const path = `/api/sales/${encodeURIComponent(saleId)}/payment-status`;
   return apiRequest(verifyProvider ? `${path}?verify_provider=1` : path);
