@@ -51,16 +51,18 @@ kali dari folder `backend`:
 python -m app.database.seeders.employee_ids
 ```
 
-Atur `INITIAL_MANAGER_NAME`, `INITIAL_MANAGER_USERNAME`, dan
-`INITIAL_MANAGER_PASSWORD` di `backend/.env`, lalu jalankan dari folder `backend`
-untuk membuat akun Manajer pertama sekaligus menyiapkan index database. Seeder
-idempotent dan tidak mengubah akun yang sudah ada. Pembuatan index dilakukan saat
-setup ini, bukan setiap request. Pembuatan dan perubahan akun Kasir beserta
-catatan `audit_logs` memerlukan MongoDB replica set agar transaksi berjalan atomik:
+Buat akun Manajer dari terminal agar username dan password tidak perlu disimpan
+di `.env`. Jalankan dari folder `backend`; command akan meminta nama, username,
+dan password secara interaktif (input password disembunyikan), lalu menyimpan
+hash bcrypt ke MongoDB. Command ini juga menyiapkan index database:
 
 ```sh
-python -m app.database.seeders.initial
+flask --app app:create_app create-manager
 ```
+
+`.env` tetap perlu berisi konfigurasi aplikasi seperti `MONGO_URI` dan
+`JWT_SECRET_KEY`. Pembuatan dan perubahan akun Kasir beserta catatan `audit_logs`
+memerlukan MongoDB replica set agar transaksi berjalan atomik:
 
 Login memakai `POST /api/auth/login` dan menghasilkan access token JWT Bearer.
 Kirim token pada header `Authorization: Bearer <token>`. `GET /api/auth/me`
