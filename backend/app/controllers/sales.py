@@ -796,32 +796,72 @@ def cancel_sale(sale_id):
 
         try:
             cancelled = midtrans.cancel_transaction(sale["payment_order_id"])
-        except midtrans.MidtransError:
-            try:
-                latest = midtrans.get_transaction_status(sale["payment_order_id"])
-                updated_sale = apply_matching_status(latest)
-            except midtrans.MidtransNotFound:
-                updated_sale = (
-                    _mark_sale_cancelled(database, sale, user)
-                    if snap_session_cancelled else sale
+        except midtrans.MidtransError as provider_error:
+            current_app.logger.info(
+                "Midtrans cancel request did not complete for %s (HTTP/status %s)",
+                sale["receipt_number"], provider_error.status_code or "unknown",
+            )
+            cancelled = None
+
+        if cancelled and cancelled.get("transaction_status", "").lower() == "cancel":
+            response_order_id = cancelled.get("order_id")
+            if response_order_id and response_order_id != sale["payment_order_id"]:
+                current_app.logger.warning(
+                    "Ignoring mismatched Midtrans cancel response for sale %s",
+                    sale["receipt_number"],
                 )
-            except midtrans.MidtransError:
-                updated_sale = sale
+            else:
+                amount = cancelled.get("gross_amount")
+                if amount is not None:
+                    try:
+                        amount_matches = Decimal(str(amount)) == _decimal(sale["total"])
+                    except InvalidOperation:
+                        amount_matches = False
+                    if not amount_matches:
+                        raise CheckoutError("payment_amount_mismatch", 400)
+                cancelled_sale = _mark_sale_cancelled(database, sale, user, cancelled)
+                return jsonify(
+                    sale=_public_sale(cancelled_sale),
+                    cancelled=cancelled_sale["status"] == "voided",
+                ), 200
+
+        try:
+            latest = midtrans.get_transaction_status(sale["payment_order_id"])
+        except midtrans.MidtransNotFound:
+            if snap_session_cancelled:
+                cancelled_sale = _mark_sale_cancelled(database, sale, user)
+                return jsonify(
+                    sale=_public_sale(cancelled_sale),
+                    cancelled=cancelled_sale["status"] == "voided",
+                ), 200
+            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+        except midtrans.MidtransError:
+            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+
+        latest_state = _provider_state(latest)
+        if latest_state != "pending":
+            updated_sale = apply_matching_status(latest)
             return jsonify(
                 sale=_public_sale(updated_sale),
                 cancelled=updated_sale["status"] == "voided",
             ), 200
 
-        if cancelled.get("transaction_status") == "cancel":
-            response_order_id = cancelled.get("order_id")
-            if response_order_id and response_order_id != sale["payment_order_id"]:
-                try:
-                    latest = midtrans.get_transaction_status(sale["payment_order_id"])
-                    updated_sale = apply_matching_status(latest)
-                    return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
-                except (midtrans.MidtransError, CheckoutError):
-                    return jsonify(sale=_public_sale(sale), cancelled=False), 200
-            amount = cancelled.get("gross_amount")
+        # Some payment channels reject Cancel while the transaction is pending.
+        # Expire it as a fallback so the payment instruction cannot stay usable.
+        try:
+            expired = midtrans.expire_transaction(sale["payment_order_id"])
+        except midtrans.MidtransError as provider_error:
+            current_app.logger.warning(
+                "Midtrans could not cancel or expire sale %s (status %s)",
+                sale["receipt_number"], provider_error.status_code or "unknown",
+            )
+            return jsonify(sale=_public_sale(sale), cancelled=False), 200
+
+        if (
+            expired.get("transaction_status", "").lower() == "expire"
+            and expired.get("order_id") == sale["payment_order_id"]
+        ):
+            amount = expired.get("gross_amount")
             if amount is not None:
                 try:
                     amount_matches = Decimal(str(amount)) == _decimal(sale["total"])
@@ -829,11 +869,17 @@ def cancel_sale(sale_id):
                     amount_matches = False
                 if not amount_matches:
                     raise CheckoutError("payment_amount_mismatch", 400)
-            cancelled_sale = _mark_sale_cancelled(database, sale, user, cancelled)
-            return jsonify(sale=_public_sale(cancelled_sale), cancelled=cancelled_sale["status"] == "voided"), 200
+            cancelled_sale = _mark_sale_cancelled(database, sale, user, expired)
+            return jsonify(
+                sale=_public_sale(cancelled_sale),
+                cancelled=cancelled_sale["status"] == "voided",
+            ), 200
 
-        updated_sale = apply_matching_status(cancelled)
-        return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
+        updated_sale = apply_matching_status(expired)
+        return jsonify(
+            sale=_public_sale(updated_sale),
+            cancelled=updated_sale["status"] == "voided",
+        ), 200
     except CheckoutError as error:
         return jsonify(error=error.code, message=str(error)), error.status
     except PyMongoError:
