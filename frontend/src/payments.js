@@ -14,6 +14,7 @@ export async function loadPaymentConfig() {
     const response = await paymentConfigRequest();
     paymentConfig = response.payment;
     state.paymentOnlineEnabled = Boolean(paymentConfig.enabled);
+    if (paymentConfig.enabled) void loadSnap().catch(() => {});
   } catch {
     paymentConfig = { enabled: false, client_key: "", script_url: "" };
     state.paymentOnlineEnabled = false;
