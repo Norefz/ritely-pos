@@ -110,6 +110,68 @@ small {
 .brand .webix_template {
   padding: 20px 20px 0;
 }
+.brand-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding-right: 32px;
+  height: 100%;
+}
+.brand-mark {
+  display: block;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+.brand-wordmark {
+  display: block;
+  width: 94px;
+  height: 44px;
+  flex: 0 1 auto;
+  max-width: 100%;
+  object-fit: contain;
+  transform: translateY(4px);
+  /* Brighten only the wordmark; the cart icon keeps its original colors. */
+  filter: brightness(4) saturate(1.5);
+}
+.sidebar-collapse {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #34445d;
+  border-radius: 8px;
+  background: #17243a;
+  color: #cbd5e1;
+  cursor: pointer;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+.sidebar-collapse:hover {
+  background: #24344e;
+  color: #fff;
+}
+.sidebar-collapse:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+.sidebar-collapse svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s ease;
+}
 .brand-surface {
   display: flex;
   align-items: center;
@@ -217,6 +279,59 @@ small {
 .sidebar .webix_list_item:focus-visible .nav-link {
   outline: 2px solid #93c5fd;
   outline-offset: 1px;
+}
+.sidebar.sidebar-collapsed {
+  width: 92px !important;
+}
+.sidebar-collapsed .brand .webix_template {
+  padding-right: 8px;
+  padding-left: 8px;
+}
+.sidebar-collapsed .workspace,
+.sidebar-collapsed .nav-caption,
+.sidebar-collapsed .profile-inner > div:not(.profile-avatar),
+.sidebar-collapsed .nav-link span {
+  display: none;
+}
+.sidebar-collapsed .brand-inner {
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 0;
+}
+.sidebar-collapsed .brand-wordmark {
+  display: none;
+}
+.sidebar-collapsed .brand-mark {
+  display: block;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+.sidebar-collapsed .sidebar-collapse {
+  position: static;
+  width: 28px;
+  height: 24px;
+  transform: none;
+}
+.sidebar-collapsed .sidebar-collapse svg {
+  transform: rotate(180deg);
+}
+.sidebar-collapsed .sidebar-profile .webix_template {
+  padding-right: 8px;
+  padding-left: 8px;
+}
+.sidebar-collapsed .profile-inner {
+  justify-content: center;
+}
+.sidebar-collapsed .sidebar .webix_list_item,
+.sidebar-collapsed .webix_list_item {
+  padding-right: 6px;
+  padding-left: 6px;
+}
+.sidebar-collapsed .nav-link {
+  justify-content: center;
+  padding: 0;
 }
 .sidebar-profile .webix_template {
   padding: 12px 20px 20px;
@@ -1087,18 +1202,6 @@ small {
     padding-left: 16px;
     padding-right: 16px;
   }
-}
-
-.brand-logo {
-  display: block;
-  width: 202px;
-  height: 68px;
-  object-fit: contain;
-  object-position: center;
-  mix-blend-mode: screen;
-  filter: brightness(6);
-  margin: 12px auto;
-  transform: translateX(-16px);
 }
 
 .dashboard-list .numeric {
