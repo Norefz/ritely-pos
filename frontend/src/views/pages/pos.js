@@ -1,8 +1,9 @@
 import { state, money, total, uid, escape } from "../../state.js";
 import { receipt } from "./common.js";
-import { ApiError, createSaleRequest, openShiftRequest } from "../../api.js";
+import { ApiError, apiAssetUrl, createSaleRequest, openShiftRequest } from "../../api.js";
 import { loadPaymentConfig, onlinePaymentsEnabled, openSnapPayment } from "../../payments.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
+import { productImageUrl } from "../product-images.js";
 
 /* ---------- Kasir (POS): konfigurasi & helper ---------- */
 // Filter dan nominal tunai bertahan saat refresh() membangun ulang halaman.
@@ -39,7 +40,12 @@ function stockTag(p) {
 /* ---------- Potongan HTML ---------- */
 function cardHtml(p) {
   const label = escape(p.name);
+  const imageUrl = p.imageUrl || productImageUrl(p.sku);
+  const image = imageUrl
+    ? `<img src="${escape(apiAssetUrl(imageUrl))}" alt="" loading="lazy" onerror="this.remove()">`
+    : "";
   return `<button type="button" class="ps-card${p.stock <= 0 ? " out" : ""}" data-act="add" data-id="${escape(String(p.id))}" data-cat="${escape(String(p.category))}" data-search="${escape((p.name + " " + p.sku).toLowerCase())}" aria-label="Tambah ${label} ke keranjang">
+    <span class="ps-photo" aria-hidden="true">${image}<span>${escape(p.name.trim().slice(0, 2).toUpperCase())}</span></span>
     <strong>${label}</strong>
     <span class="ps-price">${money(p.price)}</span>
     ${stockTag(p)}

@@ -1,4 +1,5 @@
 import { state, escape } from "../../state.js";
+import { cashierAvatarSrc } from "../cashier-avatar.js";
 export const menus={
 manager:[["dashboard","Dasbor"],["reports","Laporan"],["transactions","Transaksi"],["products","Produk"],["stock","Stok"],["shifts","Shift"],["users","Pengguna"],["audit","Log audit"]],
 cashier:[["shifts","Shift saya"],["pos","Kasir"],["transactions","Transaksi saya"],["stock","Stok"]]
@@ -10,5 +11,5 @@ export function sidebar(role,navigate){return {id:"sidebar",width:252,css:"sideb
  {view:"template",borderless:true,height:78,css:"workspace",template:'<div class="workspace-name">Toko utama</div><div class="workspace-detail">Register 01 · Asia/Jakarta</div>'},
  {view:"template",borderless:true,height:32,css:"nav-caption",template:role==="manager"?"Manajemen":"Ruang kerja"},
  {view:"list",id:"navigation",borderless:true,select:true,autoheight:true,type:{height:50},template:item=>`<div class="nav-link">${icon(item.id)}<span>${item.value}</span></div>`,data:menus[role].map(([id,value])=>({id,value})),on:{onAfterSelect:navigate}}, {},
- {view:"template",id:"sidebarProfile",borderless:true,height:84,css:"sidebar-profile",template:()=>`<div class="profile-inner"><div class="profile-avatar">${state.role==='manager'?'M':'K'}</div><div><strong>${escape(state.currentUser?.name|| (state.role==='manager'?'Manajer':'Kasir'))}</strong><span>${state.role==='manager'?'Manajer':'Kasir'}</span></div></div>`}
+ {view:"template",id:"sidebarProfile",borderless:true,height:84,css:"sidebar-profile",template:()=>`<div class="profile-inner"><div class="profile-avatar">${state.role==='manager'?'M':`<img src="${cashierAvatarSrc(state.currentUser)}" alt="">`}</div><div><strong>${escape(state.currentUser?.name|| (state.role==='manager'?'Manajer':'Kasir'))}</strong><span>${state.role==='manager'?'Manajer':'Kasir'}</span></div></div>`}
 ]};}
