@@ -3127,17 +3127,56 @@ small {
   border-top: 1px solid #e8edf4;
 }
 .sh-table {
-  min-width: 760px;
+  min-width: 980px;
 }
 .sh-c-time,
 .sh-c-closed {
   width: 190px;
+}
+.sh-c-timing {
+  width: 205px;
 }
 .sh-c-status {
   width: 140px;
 }
 .sh-c-money {
   width: 190px;
+}
+.sh-timing-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef2f8;
+  color: #56657c;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sh-timing-tag.good {
+  background: #e3f5eb;
+  color: #197344;
+}
+.sh-timing-tag.open {
+  background: #e8efff;
+  color: #2453c9;
+}
+.sh-timing-tag.late {
+  background: #fff0d0;
+  color: #945a00;
+}
+.sh-timing-tag.overdue,
+.sh-timing-tag.early {
+  background: #fde7e7;
+  color: #b42318;
+}
+.sh-timing-schedule {
+  display: block;
+  margin: 4px 0 0 2px;
+  color: #71809a;
+  font-size: 11px;
+  white-space: nowrap;
 }
 .sh-who {
   font-weight: 600;

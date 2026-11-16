@@ -46,6 +46,7 @@ const SCHEDULE = [
 ];
 
 const salesOf = (shift) => shift.sales_total || 0;
+const SHIFT_END_HOUR = { shift_1: 15, shift_2: 22 };
 const shiftError = (error) => {
   if (!(error instanceof ApiError)) return "Shift gagal diperbarui.";
   if (error.code === "shift_not_open") return "Shift sudah ditutup.";
@@ -117,14 +118,63 @@ function statusHtml() {
 }
 function rowHtml(s) {
   const open = s.status === "open";
+  const timing = timingHtml(s);
   return `<tr>
     <td><b class="sh-who">${escape(s.cashier)}</b></td>
     <td>${escape(date(s.opened_at))}</td>
     <td>${s.closed_at ? escape(date(s.closed_at)) : "—"}${s.reason ? `<small class="sh-reason" title="${escape(s.reason)}">Alasan: ${escape(s.reason)}</small>` : ""}</td>
+    <td>${timing}</td>
     <td>${escape(s.closed_by_name || "—")}</td>
     <td><span class="state-tag${open ? " good" : ""}">${open ? "Terbuka" : "Ditutup"}</span></td>
     <td class="pd-r sh-money">${money(salesOf(s))}</td>
   </tr>`;
+}
+function durationText(milliseconds) {
+  const minutes = Math.ceil(Math.abs(milliseconds) / 60000);
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours ? `${hours} jam${remainder ? ` ${remainder} mnt` : ""}` : `${minutes} mnt`;
+}
+function scheduledEnd(shift) {
+  const type = shift.shift_type || shift.assigned_shift;
+  const endHour = SHIFT_END_HOUR[type];
+  if (!endHour || !shift.opened_at) return null;
+  const opened = new Date(shift.opened_at);
+  if (Number.isNaN(opened.getTime())) return null;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(opened).map(({ type: partType, value }) => [partType, value]),
+  );
+  // Asia/Jakarta is UTC+7 and has no daylight-saving time.
+  return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), endHour - 7);
+}
+function timingHtml(shift) {
+  const end = scheduledEnd(shift);
+  const type = shift.shift_type || shift.assigned_shift;
+  const endHour = SHIFT_END_HOUR[type];
+  const schedule = endHour ? `<small class="sh-timing-schedule">Jadwal ${String(endHour).padStart(2, "0")}.00 WIB</small>` : "";
+  if (shift.status === "open") {
+    return `<span class="sh-timing-tag open">Berjalan</span>${schedule}`;
+  }
+  const closedAt = shift.closed_at ? new Date(shift.closed_at).getTime() : NaN;
+  if (end === null || Number.isNaN(closedAt)) {
+    return `<span class="sh-timing-tag">—</span>${schedule}`;
+  }
+  const difference = closedAt - end;
+  if (difference < 0) {
+    const label = shift.closed_by_role === "manager" ? "Tutup paksa" : "Lebih awal";
+    return `<span class="sh-timing-tag early">${label} ${durationText(difference)}</span>${schedule}`;
+  }
+  if (difference <= 5 * 60 * 1000) {
+    return `<span class="sh-timing-tag good">Tepat waktu</span>${schedule}`;
+  }
+  const late = Math.ceil(difference / 60000);
+  const severity = late > 30 ? "overdue" : "late";
+  return `<span class="sh-timing-tag ${severity}">Terlambat ${durationText(difference)}</span>${schedule}`;
 }
 function historyHtml() {
   const all = [...state.shifts]
@@ -136,7 +186,7 @@ function historyHtml() {
   const slice = all.slice(start, start + PAGE_SIZE);
   const body = all.length
     ? `<div class="pd-scroll"><table class="pd-table sh-table">
-        <thead><tr><th>Kasir</th><th class="sh-c-time">Dibuka (WIB)</th><th class="sh-c-closed">Ditutup (WIB)</th>
+        <thead><tr><th>Kasir</th><th class="sh-c-time">Dibuka (WIB)</th><th class="sh-c-closed">Ditutup (WIB)</th><th class="sh-c-timing">Ketepatan waktu</th>
         <th>Ditutup oleh</th><th class="sh-c-status">Status</th><th class="sh-c-money pd-r">Total penjualan</th></tr></thead>
         <tbody>${slice.map(rowHtml).join("")}</tbody></table></div>`
     : `<div class="sh-empty"><i>${icons.hist}</i><b>Belum ada riwayat shift</b>
