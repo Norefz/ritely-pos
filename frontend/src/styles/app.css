@@ -1098,6 +1098,7 @@ small {
   mix-blend-mode: screen;
   filter: brightness(6);
   margin: 12px auto;
+  transform: translateX(-6px);
 }
 
 .dashboard-list .numeric {
