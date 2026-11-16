@@ -1,5 +1,7 @@
 """Validation and persistence for categories, products, and stock adjustments."""
 
+import base64
+import binascii
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlparse
@@ -71,6 +73,33 @@ def _image_url(value):
     return image_url
 
 
+def _image_data(value):
+    if not isinstance(value, dict) or set(value) != {"content_type", "data"}:
+        raise ValueError("Data gambar tidak valid.")
+    content_type = value.get("content_type")
+    encoded = value.get("data")
+    if content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise ValueError("Gunakan gambar JPEG, PNG, atau WebP.")
+    if not isinstance(encoded, str) or len(encoded) > 1_400_000:
+        raise ValueError("Ukuran gambar maksimal 1 MB.")
+    try:
+        image = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as error:
+        raise ValueError("Data gambar tidak valid.") from error
+    if not image or len(image) > 1_048_576:
+        raise ValueError("Ukuran gambar maksimal 1 MB.")
+    detected_type = None
+    if image.startswith(b"\x89PNG\r\n\x1a\n"):
+        detected_type = "image/png"
+    elif image.startswith(b"\xff\xd8\xff"):
+        detected_type = "image/jpeg"
+    elif image.startswith(b"RIFF") and image[8:12] == b"WEBP":
+        detected_type = "image/webp"
+    if detected_type != content_type:
+        raise ValueError("Format file gambar tidak sesuai.")
+    return image, detected_type
+
+
 def _category_id(value):
     if not ObjectId.is_valid(value):
         raise ValueError("category_id tidak valid.")
@@ -103,7 +132,11 @@ def public_product(document, physical_stock=None):
         ),
         "minimum_stock": document["minimum_stock"],
         "is_active": document["is_active"],
-        "image_url": document.get("image_url", ""),
+        "image_url": (
+            f"/api/products/{document['_id']}/image"
+            if document.get("image_data")
+            else document.get("image_url", "")
+        ),
         "created_at": _isoformat(document.get("created_at")),
         "updated_at": _isoformat(document.get("updated_at")),
     }
@@ -158,6 +191,10 @@ def _validated_product_fields(data, categories, creating=False):
         )
     if creating or "image_url" in data:
         fields["image_url"] = _image_url(data.get("image_url", ""))
+    if "image_data" in data:
+        image, content_type = _image_data(data["image_data"])
+        fields["image_data"] = image
+        fields["image_content_type"] = content_type
     if "is_active" in data or creating:
         active = data.get("is_active", True)
         if not isinstance(active, bool):
@@ -218,7 +255,10 @@ def create_product(products, categories, data, session=None):
 def update_product(products, categories, product_id, data, session=None):
     if not ObjectId.is_valid(product_id):
         raise CatalogItemNotFoundError
-    allowed = {"name", "sku", "category_id", "selling_price", "minimum_stock", "is_active", "image_url"}
+    allowed = {
+        "name", "sku", "category_id", "selling_price", "minimum_stock",
+        "is_active", "image_url", "image_data",
+    }
     if set(data) - allowed:
         raise ValueError("Field produk tidak didukung.")
     updates = _validated_product_fields(data, categories)

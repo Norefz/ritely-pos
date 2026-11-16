@@ -5,6 +5,10 @@ const API_BASE_URL = (
   window.RITELY_API_BASE_URL || defaultApiBaseUrl
 ).replace(/\/$/, "");
 
+export function apiAssetUrl(path) {
+  return /^https?:\/\//i.test(path) ? path : `${API_BASE_URL}${path}`;
+}
+
 const TOKEN_STORAGE_KEY = "ritely_access_token";
 
 function readStoredToken() {

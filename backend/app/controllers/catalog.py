@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, Response, current_app, g, jsonify, request
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from app.database.catalog import (
@@ -129,6 +129,30 @@ def get_products():
     except PyMongoError:
         current_app.logger.exception("Could not list products")
         return jsonify(error="database_unavailable"), 503
+
+
+@catalog_bp.get("/products/<product_id>/image")
+def get_product_image(product_id):
+    # Product photos are public catalog assets and must load in ordinary <img> tags.
+    if not ObjectId.is_valid(product_id):
+        return jsonify(error="product_not_found"), 404
+    try:
+        product = get_products_collection().find_one(
+            {"_id": ObjectId(product_id)},
+            {"image_data": 1, "image_content_type": 1},
+        )
+    except PyMongoError:
+        current_app.logger.exception("Could not load product image")
+        return jsonify(error="database_unavailable"), 503
+    if not product or not product.get("image_data"):
+        return jsonify(error="product_image_not_found"), 404
+    response = Response(
+        bytes(product["image_data"]),
+        content_type=product.get("image_content_type", "application/octet-stream"),
+    )
+    response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @catalog_bp.post("/products")

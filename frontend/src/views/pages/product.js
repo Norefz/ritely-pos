@@ -5,6 +5,7 @@ import {
   createCategoryRequest,
   createProductRequest,
   updateProductRequest,
+  apiAssetUrl,
 } from "../../api.js";
 import { productImageUrl } from "../product-images.js";
 
@@ -39,6 +40,19 @@ function initials(name) {
 function tone(categoryId) {
   const i = state.categories.findIndex((c) => c.id === categoryId);
   return TONES[(i < 0 ? 0 : i) % TONES.length];
+}
+function productImageData(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const separator = result.indexOf(",");
+      if (separator < 0) return reject(new Error("Gambar tidak dapat dibaca."));
+      resolve({ content_type: file.type, data: result.slice(separator + 1) });
+    };
+    reader.onerror = () => reject(new Error("Gambar tidak dapat dibaca."));
+    reader.readAsDataURL(file);
+  });
 }
 function stockTag(p) {
   if (p.stock <= 0) return '<span class="stock-tag empty">Habis</span>';
@@ -101,7 +115,7 @@ function chipsHtml() {
 function rowHtml(p) {
   const photoUrl = p.imageUrl || productImageUrl(p.sku);
   const photo = photoUrl
-    ? `<img src="${escape(photoUrl)}" alt="" loading="lazy" onerror="this.remove()">`
+    ? `<img src="${escape(apiAssetUrl(photoUrl))}" alt="" loading="lazy" onerror="this.remove()">`
     : "";
   return `<tr>
     <td class="pd-sku">${escape(p.sku)}</td>
@@ -112,6 +126,22 @@ function rowHtml(p) {
     <td><span class="pd-status ${p.active ? "on" : "off"}">${p.active ? "Aktif" : "Nonaktif"}</span></td>
     <td class="pd-act"><button type="button" class="pd-edit" data-act="edit" data-id="${escape(String(p.id))}" aria-label="Ubah ${escape(p.name)}">${icons.pencil}Ubah</button></td>
   </tr>`;
+}
+
+function imageUploadField(product) {
+  const existing = product.id
+    ? product.imageUrl || productImageUrl(product.sku)
+    : "";
+  const preview = existing
+    ? `<img class="pd-image-preview" src="${escape(apiAssetUrl(existing))}" alt="Foto ${escape(product.name || "produk saat ini")}" onerror="this.remove()">`
+    : "";
+  return {
+    view: "template",
+    autoheight: true,
+    borderless: true,
+    css: "pd-image-upload-field",
+    template: `<label class="pd-image-upload">${preview}<span class="pd-image-upload-copy"><b>Foto produk</b><small>Unggah JPEG, PNG, atau WebP. Maksimal 1 MB.</small></span><input class="pd-image-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Unggah foto produk"></label>`,
+  };
 }
 function listHtml(rows) {
   return rows.length
@@ -276,14 +306,7 @@ export function products(refresh) {
         },
         numericField("price", "Harga jual (Rp)"),
         numericField("minimum", "Batas stok minimum"),
-        {
-          view: "text",
-          name: "imageUrl",
-          label: "URL gambar produk (HTTPS, opsional)",
-          placeholder: "https://contoh.com/gambar-produk.webp",
-          type: "url",
-          attributes: { inputmode: "url" },
-        },
+        imageUploadField(product),
         {
           view: "checkbox",
           name: "active",
@@ -292,7 +315,7 @@ export function products(refresh) {
         },
       ],
       product,
-      async (v) => {
+      async (v, form) => {
         if (
           !v.name.trim() ||
           !v.sku.trim() ||
@@ -307,9 +330,13 @@ export function products(refresh) {
           });
           return false;
         }
-        const imageUrl = String(v.imageUrl || "").trim();
-        if (imageUrl && !/^https:\/\//i.test(imageUrl)) {
-          webix.message({ type: "error", text: "URL gambar harus menggunakan HTTPS." });
+        const file = form.$view.querySelector(".pd-image-file")?.files?.[0];
+        if (file && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+          webix.message({ type: "error", text: "Gunakan gambar JPEG, PNG, atau WebP." });
+          return false;
+        }
+        if (file && file.size > 1_048_576) {
+          webix.message({ type: "error", text: "Ukuran gambar maksimal 1 MB." });
           return false;
         }
         if (
@@ -325,8 +352,15 @@ export function products(refresh) {
           selling_price: +v.price,
           minimum_stock: +v.minimum,
           is_active: !!+v.active,
-          image_url: imageUrl,
         };
+        if (file) {
+          try {
+            payload.image_data = await productImageData(file);
+          } catch {
+            webix.message({ type: "error", text: "Gambar gagal dibaca." });
+            return false;
+          }
+        }
         try {
           const result = product.id
             ? await updateProductRequest(product.id, payload)

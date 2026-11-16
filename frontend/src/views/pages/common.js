@@ -53,7 +53,7 @@ export function editor(title, elements, values, save) {
               function () {
                 const form = $$("editorForm");
                 if (!form.validate()) return;
-                const result = save(form.getValues());
+                const result = save(form.getValues(), form);
                 if (result && typeof result.then === "function") {
                   const saveButton = this;
                   saveButton.disable();
