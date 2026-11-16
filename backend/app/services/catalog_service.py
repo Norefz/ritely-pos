@@ -189,6 +189,10 @@ def _validated_product_fields(data, categories, creating=False):
         fields["minimum_stock"] = _nonnegative_int(
             data.get("minimum_stock"), "Stok minimum"
         )
+    if creating or "initial_stock" in data:
+        fields["initial_stock"] = _nonnegative_int(
+            data.get("initial_stock", 0), "Stok awal"
+        )
     if creating or "image_url" in data:
         fields["image_url"] = _image_url(data.get("image_url", ""))
     if "image_data" in data:
@@ -236,13 +240,14 @@ def update_category(collection, category_id, data, session=None):
 
 def create_product(products, categories, data, session=None):
     if "stock" in data:
-        raise ValueError("Stok awal diatur melalui penyesuaian stok.")
+        raise ValueError("Gunakan field initial_stock untuk mengatur stok awal.")
     document = _validated_product_fields(data, categories, creating=True)
+    initial_stock = document.pop("initial_stock")
     now = datetime.now(timezone.utc)
     document.update(
         {
-            "stock": 0,
-            "physical_stock": 0,
+            "stock": initial_stock,
+            "physical_stock": initial_stock,
             "created_at": now,
             "updated_at": now,
         }

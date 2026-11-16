@@ -32,17 +32,22 @@ export const table = (columns, data, extra = {}) => ({
   ...extra,
 });
 export function editor(title, elements, values, save) {
+  const dialogWidth = Math.min(680, window.innerWidth - 32);
   const win = webix.ui({
     view: "window",
     modal: true,
     position: "center",
-    width: Math.min(520, window.innerWidth - 24),
+    width: dialogWidth,
     head: title,
     body: {
       view: "form",
       id: "editorForm",
+      width: dialogWidth - 48,
       padding: 24,
-      elementsConfig: { labelPosition: "top" },
+      elementsConfig: {
+        labelPosition: "top",
+        width: Math.max(200, dialogWidth - 96),
+      },
       elements: [
         ...elements,
         {

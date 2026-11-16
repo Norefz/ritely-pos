@@ -1839,6 +1839,11 @@ small {
 .pd-image-upload-field .webix_template {
   padding: 0;
 }
+.pd-initial-stock-help .webix_template {
+  padding: 2px 0 4px;
+  color: #667791;
+  font-size: 12px;
+}
 .pd-image-upload {
   display: flex;
   align-items: center;

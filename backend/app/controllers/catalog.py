@@ -164,6 +164,7 @@ def post_product():
     try:
         products_collection = get_products_collection()
         categories_collection = get_categories_collection()
+        movements_collection = get_stock_movements_collection()
         client = _mongo_client()
         with client.start_session() as session:
             with session.start_transaction():
@@ -173,13 +174,28 @@ def post_product():
                     data,
                     session=session,
                 )
+                if product["stock"]:
+                    movements_collection.insert_one(
+                        {
+                            "product_id": ObjectId(product["id"]),
+                            "type": "opening_balance",
+                            "quantity": product["stock"],
+                            "user_id": g.current_user["_id"],
+                            "created_at": datetime.now(timezone.utc),
+                        },
+                        session=session,
+                    )
                 _audit_log(
                     session,
                     g.current_user,
                     "product_created",
                     "master_product",
                     ObjectId(product["id"]),
-                    {"sku": product["sku"], "name": product["name"]},
+                    {
+                        "sku": product["sku"],
+                        "name": product["name"],
+                        "initial_stock": product["stock"],
+                    },
                 )
     except DuplicateKeyError:
         return jsonify(error="sku_taken"), 409

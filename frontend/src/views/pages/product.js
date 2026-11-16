@@ -282,6 +282,7 @@ export function products(refresh) {
     product = {
       active: true,
       stock: 0,
+      initialStock: 0,
       minimum: 5,
       category: state.categories.find((category) => category.active !== false)?.id,
     },
@@ -306,6 +307,18 @@ export function products(refresh) {
         },
         numericField("price", "Harga jual (Rp)"),
         numericField("minimum", "Batas stok minimum"),
+        ...(product.id
+          ? []
+          : [
+              numericField("initialStock", "Stok awal"),
+              {
+                view: "template",
+                autoheight: true,
+                borderless: true,
+                css: "pd-initial-stock-help",
+                template: "Stok awal akan mengisi stok sistem dan stok fisik dengan angka yang sama.",
+              },
+            ]),
         imageUploadField(product),
         {
           view: "checkbox",
@@ -322,11 +335,14 @@ export function products(refresh) {
           !/^\d+$/.test(String(v.price ?? "")) ||
           !Number.isSafeInteger(Number(v.price)) ||
           !/^\d+$/.test(String(v.minimum ?? "")) ||
-          !Number.isSafeInteger(Number(v.minimum))
+          !Number.isSafeInteger(Number(v.minimum)) ||
+          (!product.id &&
+            (!/^\d+$/.test(String(v.initialStock ?? "")) ||
+              !Number.isSafeInteger(Number(v.initialStock))))
         ) {
           webix.message({
             type: "error",
-            text: "Isi nama, SKU, harga dan batas stok dengan benar.",
+            text: "Isi nama, SKU, harga, batas minimum, dan stok awal dengan benar.",
           });
           return false;
         }
@@ -353,6 +369,7 @@ export function products(refresh) {
           minimum_stock: +v.minimum,
           is_active: !!+v.active,
         };
+        if (!product.id) payload.initial_stock = Number(v.initialStock);
         if (file) {
           try {
             payload.image_data = await productImageData(file);
@@ -373,6 +390,7 @@ export function products(refresh) {
             category: saved.category_id,
             price: Number(saved.selling_price),
             stock: saved.stock,
+            physicalStock: saved.physical_stock ?? saved.stock,
             minimum: saved.minimum_stock,
             active: saved.is_active,
             imageUrl: saved.image_url || "",
