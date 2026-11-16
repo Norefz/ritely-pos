@@ -3,14 +3,11 @@ import { receipt } from "./common.js";
 import { ApiError, createSaleRequest, openShiftRequest } from "../../api.js";
 import { loadPaymentConfig, onlinePaymentsEnabled, openSnapPayment } from "../../payments.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
-import { productImageStyle } from "../product-images.js";
 
 /* ---------- Kasir (POS): konfigurasi & helper ---------- */
 // Filter dan nominal tunai bertahan saat refresh() membangun ulang halaman.
 const view = { q: "", category: "all", cash: "", paymentMethod: "cash", submitting: false, confirming: false };
 let scheduleTimer = null;
-const TONES = ["", "orange", "purple", "green"]; // warna avatar per urutan kategori
-
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 const icons = {
@@ -32,16 +29,6 @@ const scheduleAvailability = () => {
   return `${shift?.id || ""}:${shift ? canCloseShift(shiftType(shift)) : false}:${!state.shift && canOpenShift(state.currentUser?.assigned_shift)}`;
 };
 
-function initials(name) {
-  const w = name.trim().split(/\s+/);
-  return (
-    w.length > 1 ? w[0][0] + w[1][0] : name.trim().slice(0, 2)
-  ).toUpperCase();
-}
-function tone(p) {
-  const i = state.categories.findIndex((c) => c.id === p.category);
-  return TONES[(i < 0 ? 0 : i) % TONES.length];
-}
 function stockTag(p) {
   if (p.stock <= 0) return '<span class="stock-tag empty">Habis</span>';
   return isLow(p)
@@ -51,10 +38,8 @@ function stockTag(p) {
 
 /* ---------- Potongan HTML ---------- */
 function cardHtml(p) {
-  const photoStyle = productImageStyle(p.sku);
   const label = escape(p.name);
   return `<button type="button" class="ps-card${p.stock <= 0 ? " out" : ""}" data-act="add" data-id="${escape(String(p.id))}" data-cat="${escape(String(p.category))}" data-search="${escape((p.name + " " + p.sku).toLowerCase())}" aria-label="Tambah ${label} ke keranjang">
-    <span class="ps-art ${tone(p)}${photoStyle ? " has-photo" : ""}"><b>${escape(initials(p.name))}</b>${photoStyle ? `<i class="ps-product-image" style="${photoStyle}" role="img" aria-label="${label}"></i>` : ""}</span>
     <strong>${label}</strong>
     <span class="ps-price">${money(p.price)}</span>
     ${stockTag(p)}

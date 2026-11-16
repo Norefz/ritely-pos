@@ -2015,10 +2015,10 @@ small {
   background: #94a3b8;
 }
 .sk-c-product {
-  width: 21%;
+  width: 18%;
 }
 .sk-c-cat {
-  width: 14%;
+  width: 15%;
 }
 .sk-c-lvl {
   width: 19%;
@@ -2027,13 +2027,13 @@ small {
   width: 8%;
 }
 .sk-c-status {
-  width: 11%;
+  width: 12%;
 }
 .sk-c-physical {
   width: 12%;
 }
 .sk-c-act {
-  width: 15%;
+  width: 16%;
 }
 .sk-inventory-table {
   min-width: 1200px;
@@ -3396,68 +3396,6 @@ small {
 }
 .ps-card .stock-tag {
   align-self: flex-start;
-}
-.ps-art {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  height: 112px;
-  border-radius: 12px;
-  background: #dfebff;
-  color: #2250b9;
-}
-.ps-art b {
-  font:
-    700 30px Urbanist,
-    sans-serif;
-}
-.ps-art.orange {
-  background: #ffead8;
-  color: #a3471d;
-}
-.ps-art.purple {
-  background: #eee7ff;
-  color: #6945b3;
-}
-.ps-art.green {
-  background: #e4f2df;
-  color: #416f36;
-}
-.ps-art.has-photo {
-  background: #fff;
-}
-.ps-art.has-photo b {
-  display: none;
-}
-.ps-product-image {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 112px;
-  height: 112px;
-  transform: translate(-50%, -50%);
-  border-radius: 10px;
-  background-image: var(--product-image-url, url("../../assets/images/products.webp"));
-  background-repeat: no-repeat;
-  background-size: 500% 500%;
-  background-position: var(--product-image-x) var(--product-image-y);
-  background-color: #fff;
-}
-/* Inisial tetap terlihat sampai gambar benar-benar selesai dimuat. */
-.ps-art img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 8px;
-  box-sizing: border-box;
-  background: #fff;
-  opacity: 0;
-}
-.ps-art img.on {
-  opacity: 1;
 }
 .ps-badge {
   position: absolute;

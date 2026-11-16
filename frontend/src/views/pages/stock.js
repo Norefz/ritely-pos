@@ -9,7 +9,6 @@ import {
 const PAGE_SIZE = 10;
 // Filter bertahan selama sesi, termasuk saat refresh() membangun ulang halaman.
 const view = { q: "", status: "all", page: 1 };
-const TONES = ["", "orange", "purple", "green"]; // warna avatar per urutan kategori
 
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -24,16 +23,6 @@ const icons = {
 // Stok menipis = di bawah batas minimum (FR-24) atau habis.
 const lowStock = (p) => p.stock <= 0 || p.stock < p.minimum;
 
-function initials(name) {
-  const w = name.trim().split(/\s+/);
-  return (
-    w.length > 1 ? w[0][0] + w[1][0] : name.trim().slice(0, 2)
-  ).toUpperCase();
-}
-function tone(categoryId) {
-  const i = state.categories.findIndex((c) => c.id === categoryId);
-  return TONES[(i < 0 ? 0 : i) % TONES.length];
-}
 function stockTag(p) {
   if (p.stock <= 0) return '<span class="stock-tag empty">Habis</span>';
   return lowStock(p)
@@ -104,8 +93,7 @@ function rowHtml(p) {
   const name = escape(p.name);
   const counted = physicalStock(p);
   return `<tr>
-    <td><div class="pd-name"><i class="pd-av ${tone(p.category)}">${escape(initials(p.name))}</i>
-      <div class="sk-prod"><b>${escape(p.name)}</b><small>${escape(p.sku)}</small></div></div></td>
+    <td><div class="sk-prod"><b>${escape(p.name)}</b><small>${escape(p.sku)}</small></div></td>
     <td>${escape(categoryName(p.category))}</td>
     <td>${levelHtml(p)}</td>
     <td class="sk-physical-value">${counted}</td>
