@@ -163,8 +163,9 @@ export async function continuePaymentRequest(saleId) {
   });
 }
 
-export async function refreshPaymentStatusRequest(saleId) {
-  return apiRequest(`/api/sales/${encodeURIComponent(saleId)}/payment-status`);
+export async function refreshPaymentStatusRequest(saleId, verifyProvider = false) {
+  const path = `/api/sales/${encodeURIComponent(saleId)}/payment-status`;
+  return apiRequest(verifyProvider ? `${path}?verify_provider=1` : path);
 }
 
 export function hasAccessToken() {
