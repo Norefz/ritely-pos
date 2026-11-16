@@ -53,9 +53,9 @@ function mergeSale(updated) {
   return state.sales.find((sale) => sale.sale_id === updated.sale_id);
 }
 
-async function checkStatus(sale, refresh) {
+async function checkStatus(sale, refresh, verifyProvider = false) {
   try {
-    const response = await refreshPaymentStatusRequest(sale.sale_id);
+    const response = await refreshPaymentStatusRequest(sale.sale_id, verifyProvider);
     const previous = state.sales.find((row) => row.sale_id === response.sale.sale_id);
     const saved = mergeSale(response.sale);
     const changed = !previous
@@ -95,7 +95,7 @@ function watchPaymentStatus(sale, refresh) {
       const elapsed = Date.now() - startedAt;
       const delay = elapsed < 15_000 ? 1_000 : elapsed < 60_000 ? 5_000 : 15_000;
       await new Promise((resolve) => window.setTimeout(resolve, delay));
-      current = await checkStatus(current, refresh);
+      current = await checkStatus(current, refresh, elapsed < 10_000);
       if (current.status === "completed") {
         webix.message("Pembayaran terverifikasi dan transaksi selesai.");
       } else if (current.payment_status === "paid") {
@@ -118,7 +118,7 @@ export async function openSnapPayment(sale, token, refresh) {
       const settle = async (message) => {
         if (finished) return;
         finished = true;
-        const updated = await checkStatus(sale, refresh);
+        const updated = await checkStatus(sale, refresh, true);
         if (!isPaymentFinal(updated)) watchPaymentStatus(updated, refresh);
         if (message) webix.message(message(updated));
         resolve(updated);

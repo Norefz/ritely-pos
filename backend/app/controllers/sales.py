@@ -653,8 +653,39 @@ def refresh_payment_status(sale_id):
     try:
         _client, database = _database()
         sale = _sale_access(database, sale_id, user)
-        # Midtrans webhooks update the sale. The cashier client only reads this
-        # persisted state and never queries Midtrans for payment status.
+        # The browser only talks to Ritely. During the short checkout window,
+        # let the backend verify Midtrans status as a fallback to webhook delay.
+        if (
+            request.args.get("verify_provider") == "1"
+            and sale["payment_method"] == "online"
+            and sale["status"] == "pending"
+            and sale["payment_status"] in {"creating", "pending", "unknown"}
+        ):
+            now = datetime.now(timezone.utc)
+            checked_before = now - timedelta(seconds=2)
+            claim = database["sales"].find_one_and_update(
+                {
+                    "_id": sale["_id"],
+                    "status": "pending",
+                    "payment_status": {"$in": ["creating", "pending", "unknown"]},
+                    "$or": [
+                        {"payment_status_checked_at": {"$exists": False}},
+                        {"payment_status_checked_at": {"$lte": checked_before}},
+                    ],
+                },
+                {"$set": {"payment_status_checked_at": now}},
+                return_document=ReturnDocument.AFTER,
+            )
+            if claim:
+                try:
+                    provider = midtrans.get_transaction_status(sale["payment_order_id"])
+                    sale = _apply_provider_status(database, claim, provider, user["_id"])
+                except midtrans.MidtransNotFound:
+                    sale = claim
+                except midtrans.MidtransError:
+                    sale = claim
+            else:
+                sale = database["sales"].find_one({"_id": sale["_id"]}) or sale
         return jsonify(sale=_public_sale(sale)), 200
     except CheckoutError as error:
         return jsonify(error=error.code, message=str(error)), error.status
