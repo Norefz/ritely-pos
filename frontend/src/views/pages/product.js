@@ -7,7 +7,7 @@ import {
   updateProductRequest,
   apiAssetUrl,
 } from "../../api.js";
-import { productImageUrl } from "../product-images.js";
+import { productImageStyle } from "../product-images.js";
 
 /* ---------- Halaman Produk: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
@@ -113,13 +113,14 @@ function chipsHtml() {
   );
 }
 function rowHtml(p) {
-  const photoUrl = p.imageUrl || productImageUrl(p.sku);
-  const photo = photoUrl
-    ? `<img src="${escape(apiAssetUrl(photoUrl))}" alt="" loading="lazy" onerror="this.remove()">`
+  const photoStyle = p.imageUrl ? "" : productImageStyle(p.sku);
+  const photo = p.imageUrl
+    ? `<img src="${escape(apiAssetUrl(p.imageUrl))}" alt="" loading="lazy" onload="this.parentElement.classList.add('has-image')" onerror="this.remove()">`
     : "";
+  const hasPhoto = !!photoStyle || !!photo;
   return `<tr>
     <td class="pd-sku">${escape(p.sku)}</td>
-    <td><div class="pd-name"><i class="pd-av ${tone(p.category)}${photo ? " pd-product-photo" : ""}" aria-hidden="true">${photo}${escape(initials(p.name))}</i><b>${escape(p.name)}</b></div></td>
+    <td><div class="pd-name"><i class="pd-av ${tone(p.category)}${hasPhoto ? " pd-product-photo" : ""}${photoStyle ? " pd-generated-photo" : ""}"${photoStyle ? ` style="${photoStyle}"` : ""} aria-hidden="true">${photo}${photo ? `<span>${escape(initials(p.name))}</span>` : hasPhoto ? "" : escape(initials(p.name))}</i><b>${escape(p.name)}</b></div></td>
     <td>${escape(categoryName(p.category))}</td>
     <td class="pd-price">${money(p.price)}</td>
     <td><div class="pd-stock"><b>${p.stock}</b>${stockTag(p)}</div></td>
@@ -129,9 +130,7 @@ function rowHtml(p) {
 }
 
 function imageUploadField(product) {
-  const existing = product.id
-    ? product.imageUrl || productImageUrl(product.sku)
-    : "";
+  const existing = product.id ? product.imageUrl : "";
   const preview = existing
     ? `<img class="pd-image-preview" src="${escape(apiAssetUrl(existing))}" alt="Foto ${escape(product.name || "produk saat ini")}" onerror="this.remove()">`
     : "";

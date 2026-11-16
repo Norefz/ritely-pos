@@ -6,7 +6,7 @@ const SHEET_ROW_START = {
   PRD: 20,
 };
 
-export function productImageUrl(sku) {
+export function productImageStyle(sku) {
   const match = /^(MNM|MKN|BPO|RMH|PRD)-(\d{3})$/.exec(String(sku || ""));
   if (!match) return "";
   const rowStart = SHEET_ROW_START[match[1]];
@@ -15,5 +15,7 @@ export function productImageUrl(sku) {
   const sheet = Math.floor(skuIndex / 5);
   const categoryIndex = skuIndex % 5;
   const index = sheet * 25 + rowStart + categoryIndex;
-  return `/assets/images/product-tiles/product-${String(index).padStart(2, "0")}.webp`;
+  const column = index % 5;
+  const row = Math.floor(index / 5);
+  return `--product-image-x:${column * 25}%;--product-image-y:${(row / 9) * 100}%;`;
 }

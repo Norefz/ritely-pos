@@ -1834,6 +1834,12 @@ small {
 .pd-product-photo {
   background-color: #fff;
 }
+.pd-generated-photo {
+  background-image: url("/assets/images/products-contact-sheet.webp");
+  background-repeat: no-repeat;
+  background-size: 500% 1000%;
+  background-position: var(--product-image-x) var(--product-image-y);
+}
 .pd-product-photo img {
   position: absolute;
   inset: 0;
@@ -1842,6 +1848,9 @@ small {
   object-fit: contain;
   border-radius: inherit;
   background: #fff;
+}
+.pd-product-photo.has-image > span {
+  opacity: 0;
 }
 .pd-image-upload-field .webix_template {
   padding: 0;
@@ -3456,7 +3465,8 @@ small {
   display: grid;
   place-items: center;
   flex: 0 0 88px;
-  width: 100%;
+  align-self: center;
+  width: 88px;
   height: 88px;
   overflow: hidden;
   border-radius: 12px;
@@ -3473,6 +3483,15 @@ small {
   box-sizing: border-box;
   object-fit: contain;
   background: #fff;
+}
+.ps-generated-photo {
+  background-image: url("/assets/images/products-contact-sheet.webp");
+  background-repeat: no-repeat;
+  background-size: 500% 1000%;
+  background-position: var(--product-image-x) var(--product-image-y);
+}
+.ps-photo.has-image > span {
+  opacity: 0;
 }
 .ps-photo > span {
   z-index: 0;
