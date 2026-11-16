@@ -111,6 +111,22 @@ Karena itu, kasir berikutnya baru dapat membuka shift setelah shift aktif ditutu
 Penjualan dan jumlah transaksi shift dihitung saat diminta dari transaksi
 `completed`/`paid`, bukan disimpan sebagai total manual pada dokumen shift.
 
+Untuk mengisi riwayat development dengan data contoh, jalankan dari root
+repository. Seeder memakai akun Kasir yang sudah ada, membuat 50 shift pada 60
+hari terakhir, dengan sekitar 80% tepat waktu (hijau) dan sisanya terlambat
+ringan (kuning) atau lama (merah). Data diberi penanda khusus dan tidak boleh
+dijalankan pada deployment Vercel production:
+
+```sh
+PYTHONPATH=backend RITELY_ENVIRONMENT=development \
+  RITELY_CONFIRM_DATABASE=ritely-pos \
+  backend/.venv/bin/python -m app.database.seeders.shift_history
+```
+
+Jumlah dan rentang hari dapat diatur dengan `--count` dan `--days`. Untuk
+mengganti data dummy yang dibuat seeder ini saja, tambahkan `--replace`.
+Gunakan nama database development yang sesuai pada `RITELY_CONFIRM_DATABASE`.
+
 Shift dan transaksi POS tersimpan di backend. Pembayaran tunai diselesaikan
 langsung saat checkout, sedangkan transaksi online menunggu verifikasi Midtrans
 Sandbox sebelum penjualan selesai dan stok dikurangi.
