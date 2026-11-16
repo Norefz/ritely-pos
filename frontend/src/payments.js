@@ -87,10 +87,12 @@ function isPaymentFinal(sale) {
 function watchPaymentStatus(sale, refresh) {
   if (paymentWatchers.has(sale.sale_id)) return;
   const expiresAt = Date.parse(sale.payment_expired_at || "") || Date.now() + 15 * 60 * 1000;
+  const startedAt = Date.now();
   const watcher = (async () => {
     let current = sale;
-    let delay = 1500;
     while (!isPaymentFinal(current) && Date.now() < expiresAt) {
+      const elapsed = Date.now() - startedAt;
+      const delay = elapsed < 15_000 ? 1_000 : elapsed < 60_000 ? 5_000 : 15_000;
       await new Promise((resolve) => window.setTimeout(resolve, delay));
       current = await checkStatus(current, refresh);
       if (current.status === "completed") {
@@ -102,7 +104,6 @@ function watchPaymentStatus(sale, refresh) {
       } else if (current.payment_status === "expired" || current.status === "expired") {
         webix.message({ type: "error", text: "Waktu pembayaran habis. Transaksi tidak diselesaikan." });
       }
-      delay = Math.min(Math.round(delay * 1.35), 7000);
     }
   })().finally(() => paymentWatchers.delete(sale.sale_id));
   paymentWatchers.set(sale.sale_id, watcher);
