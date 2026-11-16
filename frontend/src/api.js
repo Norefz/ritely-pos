@@ -149,6 +149,10 @@ export async function salesRequest() {
   return apiRequest("/api/sales");
 }
 
+export async function auditLogsRequest() {
+  return apiRequest("/api/audit-logs");
+}
+
 export async function createSaleRequest(data) {
   return apiRequest("/api/sales", {
     method: "POST",

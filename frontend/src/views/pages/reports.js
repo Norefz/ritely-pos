@@ -56,7 +56,7 @@ function exportCsv(list) {
   );
   const a = document.createElement("a");
   a.href = url;
-  a.download = "ritely-laporan-demo.csv";
+  a.download = "ritely-laporan-penjualan.csv";
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -66,31 +66,19 @@ export function reports() {
   const units = {};
   sales.forEach((s) =>
     s.items.forEach((i) => {
-      units[i.id] ??= { id: i.id, name: i.name, quantity: 0, total: 0 };
-      units[i.id].quantity += i.quantity;
-      units[i.id].total += i.price * i.quantity;
+      const productId = i.product_id;
+      units[productId] ??= {
+        id: productId,
+        name: i.name,
+        quantity: 0,
+        total: 0,
+      };
+      units[productId].quantity += i.quantity;
+      units[productId].total += i.line_total ?? i.price * i.quantity;
     }),
   );
-  let all = Object.values(units).sort((a, b) => b.quantity - a.quantity);
-  const demoOnly = !sales.length;
-  if (demoOnly) {
-    const sampleUnits = [24, 19, 16, 13, 11, 9, 7, 5];
-    all = state.products
-      .filter((product) => product.active)
-      .map((product, index) => {
-        const quantity = sampleUnits[index % sampleUnits.length];
-        return {
-          id: product.id,
-          name: product.name,
-          quantity,
-          total: product.price * quantity,
-        };
-      })
-      .sort((a, b) => b.quantity - a.quantity);
-  }
-  const revenue = demoOnly
-    ? all.reduce((n, product) => n + product.total, 0)
-    : sales.reduce((n, s) => n + s.total, 0);
+  const all = Object.values(units).sort((a, b) => b.quantity - a.quantity);
+  const revenue = sales.reduce((n, s) => n + s.total, 0);
   const unitCount = all.reduce((n, p) => n + p.quantity, 0);
 
   // Ringkasan metode pembayaran
@@ -103,12 +91,6 @@ export function reports() {
     split[k].count += 1;
     split[k].total += s.total;
   });
-  if (demoOnly) {
-    split.cash.count = 52;
-    split.online.count = 34;
-    split.cash.total = Math.round(revenue * 0.64);
-    split.online.total = revenue - split.cash.total;
-  }
   const cashPct = revenue ? Math.round((split.cash.total / revenue) * 100) : 0;
   const onlinePct = revenue ? 100 - cashPct : 0;
 
@@ -132,7 +114,7 @@ export function reports() {
 
   const kpiTemplate =
     `<div><i class="kpi-icon" style="background:#e8efff;color:#1d4ed8">${ICON_MONEY}</i><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong></div>` +
-    `<div><i class="kpi-icon" style="background:#e3f5eb;color:#197344">${ICON_RECEIPT}</i><span>Transaksi</span><strong>${demoOnly ? 86 : sales.length}</strong></div>` +
+    `<div><i class="kpi-icon" style="background:#e3f5eb;color:#197344">${ICON_RECEIPT}</i><span>Transaksi</span><strong>${sales.length}</strong></div>` +
     `<div><i class="kpi-icon" style="background:#ffead8;color:#a3471d">${ICON_BOX}</i><span>Unit terjual</span><strong>${unitCount}</strong></div>`;
 
   let page = 0;
@@ -152,9 +134,7 @@ export function reports() {
       .join("");
     const pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
     const pager = `<div class="rp-pagination"><span>Halaman ${page + 1} dari ${pages}</span><div><button class="rp-page-prev" aria-label="Halaman sebelumnya" ${page === 0 ? "disabled" : ""}>‹</button><button class="rp-page-next" aria-label="Halaman berikutnya" ${page >= pages - 1 ? "disabled" : ""}>›</button></div></div>`;
-    const listFoot = demoOnly
-      ? "Data produk contoh untuk pratinjau. Angka transaksi dan penjualan akan terisi setelah kasir menyelesaikan transaksi."
-      : `Kontribusi dihitung terhadap total penjualan ${money(revenue)}.`;
+    const listFoot = `Kontribusi dihitung terhadap total penjualan ${money(revenue)}.`;
     return (
       `<div class="rp-head"><div><h2>Produk terlaris</h2><span class="rp-sub">Diurutkan berdasarkan unit terjual</span></div><span class="rp-count">${all.length} produk</span></div>` +
       (top.length
@@ -171,7 +151,7 @@ export function reports() {
       ? `<i class="online" style="flex:${split.online.total}"></i>`
       : "");
   const paymentHtml =
-    `<div class="rp-head"><div><h2>Metode pembayaran</h2><span class="rp-sub">${demoOnly ? "Ringkasan 86 transaksi contoh" : `Dari ${sales.length} transaksi lunas`}</span></div></div>` +
+    `<div class="rp-head"><div><h2>Metode pembayaran</h2><span class="rp-sub">Dari ${sales.length} transaksi lunas</span></div></div>` +
     `<div class="rp-stack${stackParts ? "" : " empty"}" role="img" aria-label="Tunai ${cashPct} persen, Online ${onlinePct} persen">${stackParts}</div>` +
     `<div class="rp-leg"><span class="sw cash"></span><div><b>Tunai</b><small>${split.cash.count} transaksi</small></div><div class="amt"><b>${money(split.cash.total)}</b><small>${cashPct}%</small></div></div>` +
     `<div class="rp-leg"><span class="sw online"></span><div><b>Online (Midtrans)</b><small>${split.online.count} transaksi</small></div><div class="amt"><b>${money(split.online.total)}</b><small>${onlinePct}%</small></div></div>`;
@@ -215,7 +195,7 @@ export function reports() {
           cols: [
             heading(
               "Laporan penjualan",
-              "Seluruh sesi demo · Dihitung hanya dari transaksi completed dan paid.",
+              "Dihitung dari transaksi yang selesai dan pembayarannya lunas.",
             ),
             {},
             reportActions,
