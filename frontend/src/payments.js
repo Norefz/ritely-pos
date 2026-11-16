@@ -100,10 +100,6 @@ function watchPaymentStatus(sale, refresh) {
         webix.message("Pembayaran terverifikasi dan transaksi selesai.");
       } else if (current.payment_status === "paid") {
         webix.message({ type: "error", text: "Pembayaran diterima, tetapi transaksi perlu pemeriksaan manager." });
-      } else if (current.payment_status === "failed" || current.status === "voided") {
-        webix.message({ type: "error", text: "Pembayaran gagal. Transaksi tidak diselesaikan." });
-      } else if (current.payment_status === "expired" || current.status === "expired") {
-        webix.message({ type: "error", text: "Waktu pembayaran habis. Transaksi tidak diselesaikan." });
       }
     }
   })().finally(() => paymentWatchers.delete(sale.sale_id));
@@ -130,10 +126,10 @@ export async function openSnapPayment(sale, token, refresh) {
         onPending: () => settle(() => "Pembayaran masih menunggu. Status akan diperbarui setelah webhook mengonfirmasi backend."),
         onError: () => settle((updated) => updated.status === "completed"
           ? "Pembayaran terverifikasi dan transaksi selesai."
-          : "Pembayaran belum terkonfirmasi. Status transaksi akan diperbarui dari backend."),
+          : null),
         onClose: () => settle((updated) => updated.status === "completed"
           ? "Pembayaran terverifikasi dan transaksi selesai."
-          : "Halaman pembayaran ditutup. Transaksi tetap menunggu konfirmasi webhook dari backend."),
+          : null),
       });
     });
   } catch {
