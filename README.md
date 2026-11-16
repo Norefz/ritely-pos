@@ -63,7 +63,7 @@ cd ..
 ```
 
 > [!TIP]
-> Untuk mengisi katalog development dengan data contoh, jalankan seeder yang dijelaskan di [panduan backend](backend/README.md). Seeder hanya boleh diarahkan ke database development.
+> Seeder di [panduan backend](backend/README.md) dapat mengisi katalog, riwayat shift, dan transaksi contoh untuk development. Setiap shift contoh memiliki empat transaksi lunas (tunai dan online) serta satu pembatalan; penjualannya minimal Rp200.000 per shift. Data ini mengisi laporan, tetapi tidak mengubah stok atau menghubungi Midtrans. Arahkan seeder hanya ke database development.
 
 Jalankan aplikasi:
 

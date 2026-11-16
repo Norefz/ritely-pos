@@ -112,20 +112,38 @@ Penjualan dan jumlah transaksi shift dihitung saat diminta dari transaksi
 `completed`/`paid`, bukan disimpan sebagai total manual pada dokumen shift.
 
 Untuk mengisi riwayat development dengan data contoh, jalankan dari root
-repository. Seeder memakai akun Kasir yang sudah ada, membuat 50 shift pada 60
-hari terakhir, dengan sekitar 80% tepat waktu (hijau) dan sisanya terlambat
-ringan (kuning) atau lama (merah). Data diberi penanda khusus dan tidak boleh
-dijalankan pada deployment Vercel production:
+repository. Seeder memakai akun Kasir yang sudah ada, membuat 50 shift dengan
+sekitar 80% tepat waktu (hijau) dan sisanya terlambat ringan (kuning) atau lama
+(merah). Gunakan `--start-date` dan `--end-date` untuk memilih tanggal; data
+diberi penanda khusus dan tidak boleh dijalankan pada deployment Vercel production:
 
 ```sh
 PYTHONPATH=backend RITELY_ENVIRONMENT=development \
   RITELY_CONFIRM_DATABASE=ritely-pos \
-  backend/.venv/bin/python -m app.database.seeders.shift_history
+  backend/.venv/bin/python -m app.database.seeders.shift_history \
+  --start-date 2026-11-01 --end-date 2026-11-18 --replace
 ```
 
-Jumlah dan rentang hari dapat diatur dengan `--count` dan `--days`. Untuk
-mengganti data dummy yang dibuat seeder ini saja, tambahkan `--replace`.
+Jumlah shift dapat diatur dengan `--count`; jika tanggal tidak ditentukan,
+`--days` menyebarkan data ke rentang hari sebelumnya. `--replace` mengganti
+shift contoh sebelumnya sekaligus menghapus transaksi contoh yang terkait.
 Gunakan nama database development yang sesuai pada `RITELY_CONFIRM_DATABASE`.
+
+Setelah shift dummy dibuat, isi setiap shift dengan lima transaksi contoh agar
+total penjualan shift dan laporan terisi. Empat transaksi berhasil/lunas dan
+satu dibatalkan (80/20); transaksi lunas terbagi rata antara tunai dan online.
+Setiap transaksi lunas bernilai minimal Rp50.000, sehingga nilai penjualan per
+shift minimal Rp200.000. Transaksi memakai snapshot produk aktif, ditandai
+sebagai data contoh, dan tidak mengubah stok ataupun menghubungi Midtrans:
+
+```sh
+PYTHONPATH=backend RITELY_ENVIRONMENT=development \
+  RITELY_CONFIRM_DATABASE=ritely-pos \
+  backend/.venv/bin/python -m app.database.seeders.shift_sales
+```
+
+Tambahkan `--replace` untuk mengganti hanya transaksi contoh yang dibuat seeder
+ini. Sebaiknya jalankan seeder shift terlebih dahulu.
 
 Shift dan transaksi POS tersimpan di backend. Pembayaran tunai diselesaikan
 langsung saat checkout, sedangkan transaksi online menunggu verifikasi Midtrans

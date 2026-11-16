@@ -5,6 +5,7 @@ import os
 import random
 import re
 import sys
+import uuid
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -21,6 +22,7 @@ SCHEDULES = {
     "shift_2": (time(15, 0), time(22, 0)),
 }
 DEMO_MARKER = "sample_shift_history_v1"
+DEMO_SALES_MARKER = "sample_shift_sales_v1"
 
 
 def validate_target():
@@ -44,7 +46,7 @@ def validate_target():
         )
 
 
-def _make_shift(cashier, shift_type, shift_date, timing):
+def _make_shift(cashier, shift_type, shift_date, timing, demo_batch):
     start_time, end_time = SCHEDULES[shift_type]
     opened_local = datetime.combine(
         shift_date, start_time, tzinfo=STORE_TIMEZONE
@@ -76,14 +78,26 @@ def _make_shift(cashier, shift_type, shift_date, timing):
         "activity_version": 1,
         "created_at": now,
         "demo_seed": DEMO_MARKER,
+        "demo_batch": demo_batch,
     }
 
 
-def seed_shift_history(database, count=50, days=60, replace=False):
+def seed_shift_history(
+    database,
+    count=50,
+    days=60,
+    replace=False,
+    start_date=None,
+    end_date=None,
+):
     if not 1 <= count <= 500:
         raise ValueError("Jumlah shift harus antara 1 dan 500.")
     if not 1 <= days <= 365:
         raise ValueError("Rentang hari harus antara 1 dan 365.")
+    if (start_date is None) != (end_date is None):
+        raise ValueError("Isi --start-date dan --end-date bersamaan.")
+    if start_date and end_date < start_date:
+        raise ValueError("--end-date tidak boleh sebelum --start-date.")
 
     users = database["users"]
     cashiers = list(
@@ -102,9 +116,6 @@ def seed_shift_history(database, count=50, days=60, replace=False):
             f"Sudah ada {existing_demo_count} shift dummy. Gunakan --replace "
             "untuk mengganti hanya data dummy ini."
         )
-    if replace and existing_demo_count:
-        shifts.delete_many({"demo_seed": DEMO_MARKER})
-
     on_time_count = int(count * 0.8)
     remaining = count - on_time_count
     timings = (
@@ -115,22 +126,40 @@ def seed_shift_history(database, count=50, days=60, replace=False):
     random.shuffle(timings)
 
     today = datetime.now(STORE_TIMEZONE).date()
+    demo_batch = uuid.uuid4().hex
     documents = []
     for timing in timings:
         cashier = random.choice(cashiers)
         shift_type = cashier.get("assigned_shift")
         if shift_type not in SCHEDULES:
             shift_type = random.choice(tuple(SCHEDULES))
-        shift_date = today - timedelta(days=random.randint(1, days))
-        documents.append(_make_shift(cashier, shift_type, shift_date, timing))
+        if start_date:
+            date_span = (end_date - start_date).days
+            shift_date = start_date + timedelta(days=random.randint(0, date_span))
+        else:
+            shift_date = today - timedelta(days=random.randint(1, days))
+        documents.append(
+            _make_shift(cashier, shift_type, shift_date, timing, demo_batch)
+        )
 
     if documents:
         shifts.insert_many(documents)
+    if replace and existing_demo_count:
+        database["sales"].delete_many({"demo_seed": DEMO_SALES_MARKER})
+        shifts.delete_many(
+            {"demo_seed": DEMO_MARKER, "demo_batch": {"$ne": demo_batch}}
+        )
     return {
         "total": len(documents),
         "on_time": on_time_count,
         "late": timings.count("late"),
         "overdue": timings.count("overdue"),
+        "first_date": min(document["opened_at"] for document in documents)
+        .astimezone(STORE_TIMEZONE)
+        .date(),
+        "last_date": max(document["opened_at"] for document in documents)
+        .astimezone(STORE_TIMEZONE)
+        .date(),
     }
 
 
@@ -138,6 +167,16 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Isi riwayat shift dummy untuk development.")
     parser.add_argument("--count", type=int, default=50, help="Jumlah shift (1–500).")
     parser.add_argument("--days", type=int, default=60, help="Sebar data ke hari sebelumnya (1–365).")
+    parser.add_argument(
+        "--start-date",
+        type=date.fromisoformat,
+        help="Tanggal awal inclusive, format YYYY-MM-DD.",
+    )
+    parser.add_argument(
+        "--end-date",
+        type=date.fromisoformat,
+        help="Tanggal akhir inclusive, format YYYY-MM-DD.",
+    )
     parser.add_argument(
         "--replace",
         action="store_true",
@@ -153,7 +192,14 @@ def main(argv=None):
             Config.MONGO_SERVER_SELECTION_TIMEOUT_MS,
         )
         ensure_indexes(database)
-        result = seed_shift_history(database, args.count, args.days, args.replace)
+        result = seed_shift_history(
+            database,
+            args.count,
+            args.days,
+            args.replace,
+            args.start_date,
+            args.end_date,
+        )
     except (PyMongoError, ValueError) as error:
         print(f"Seeder riwayat shift gagal: {error}")
         return 1
@@ -161,7 +207,8 @@ def main(argv=None):
     print(
         "Seeder riwayat shift selesai: "
         f"{result['total']} shift ({result['on_time']} tepat waktu/hijau, "
-        f"{result['late']} terlambat/kuning, {result['overdue']} terlambat lama/merah)."
+        f"{result['late']} terlambat/kuning, {result['overdue']} terlambat lama/merah) "
+        f"pada {result['first_date']}–{result['last_date']}."
     )
     return 0
 
