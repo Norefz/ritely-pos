@@ -45,7 +45,7 @@ const visible = () =>
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 const statusOf = (s) => {
   if (s.payment_cancellation_status === "unconfirmed") {
-    return { label: "Batal · cek Midtrans", cls: "warning" };
+    return { label: "Dibatalkan", cls: "empty" };
   }
   if (s.reconciliation_status === "pending" && s.payment_status === "paid") {
     return { label: "Perlu rekonsiliasi", cls: "warning" };
