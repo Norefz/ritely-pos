@@ -2,6 +2,7 @@
 
 import base64
 import json
+import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -97,7 +98,12 @@ def create_snap_transaction(sale):
         },
         "page_expiry": {"unit": "minutes", "duration": 15},
     }
-    result = _request(base_url, "POST", payload)
+    started_at = time.monotonic()
+    try:
+        result = _request(base_url, "POST", payload)
+    finally:
+        elapsed_ms = round((time.monotonic() - started_at) * 1000)
+        current_app.logger.info("Midtrans Snap session request completed in %d ms", elapsed_ms)
     token = result.get("token")
     redirect_url = result.get("redirect_url")
     if not token or not redirect_url:
