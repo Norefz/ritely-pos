@@ -741,6 +741,23 @@ small {
   border-radius: 12px !important;
   font-weight: 600;
 }
+.dashboard-period select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 30px 0 14px;
+  border: 1px solid #d8e0ec;
+  border-radius: 12px;
+  background-color: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dashboard-period select:focus-visible {
+  outline: 2px solid #93b4ff;
+  outline-offset: 2px;
+}
 .report-action .webix_button {
   background: #2453dc !important;
   border: 1px solid #2453dc !important;
@@ -1591,6 +1608,7 @@ small {
 }
 .stock-page .stock-section-head {
   align-items: center;
+  flex-wrap: wrap;
   padding: 18px 24px 12px;
 }
 .stock-page .stock-section-head h2 {
@@ -1602,6 +1620,9 @@ small {
   margin-top: 5px;
   font-size: 13px;
   line-height: 1.45;
+}
+.stock-page .so-history-head .pd-period {
+  flex: 0 0 184px;
 }
 .pd-add {
   display: inline-flex;
@@ -1740,6 +1761,35 @@ small {
   flex-wrap: wrap;
   gap: 12px;
   padding: 14px 18px;
+}
+.tx-period,
+.pd-period {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 184px;
+  color: #56657c;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tx-period select,
+.pd-period select {
+  box-sizing: border-box;
+  width: 132px;
+  height: 48px;
+  padding: 0 28px 0 12px;
+  border: 1px solid #d8e0ec;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  font: 500 14px Outfit, sans-serif;
+  cursor: pointer;
+}
+.tx-period select:focus-visible,
+.pd-period select:focus-visible {
+  outline: 2px solid #2453dc;
+  outline-offset: 2px;
 }
 .pd-search {
   position: relative;
@@ -2162,6 +2212,14 @@ small {
   }
   .pd-search {
     max-width: none;
+  }
+  .tx-period,
+  .pd-period {
+    flex: 1 1 100%;
+  }
+  .tx-period select,
+  .pd-period select {
+    flex: 1;
   }
   .pd-chip.pd-low {
     margin-left: 0;
@@ -3047,6 +3105,7 @@ small {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 22px 26px 18px;
 }
@@ -3057,6 +3116,11 @@ small {
   margin: 4px 0 0;
   font-size: 14px;
   color: #69778e;
+}
+.sh-history-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .sh-hist-head + .pd-scroll .pd-table thead th,
 .sh-hist-head + .sh-empty {
@@ -3961,8 +4025,8 @@ small {
 .lg-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: #fff;
+  gap: 7px;
+  color: #cbd5e1;
   font:
     700 30px Urbanist,
     sans-serif;
@@ -3970,14 +4034,23 @@ small {
 .lg-brand i {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: #2563eb;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
 }
-.lg-brand .lg-ico {
-  width: 23px;
-  height: 23px;
+.lg-brand i img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+.lg-brand .lg-wordmark {
+  display: block;
+  width: 94px;
+  height: 44px;
+  max-width: 100%;
+  object-fit: contain;
+  transform: translateY(4px);
+  filter: brightness(4) saturate(1.5);
 }
 .lg-pitch h1 {
   max-width: 460px;

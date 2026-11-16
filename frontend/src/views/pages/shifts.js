@@ -1,10 +1,11 @@
 import { state, money, date, escape } from "../../state.js";
 import { editor } from "./common.js";
 import { ApiError, closeShiftRequest } from "../../api.js";
+import { isInPeriod, periodOptionsHtml } from "../../date-period.js";
 
 /* ---------- Halaman Shift manajer: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
-const view = { page: 1 }; // halaman riwayat bertahan saat refresh() membangun ulang halaman
+const view = { page: 1, period: "all" }; // filter dan halaman riwayat bertahan saat refresh
 
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -126,7 +127,9 @@ function rowHtml(s) {
   </tr>`;
 }
 function historyHtml() {
-  const all = [...state.shifts].reverse(); // terbaru di atas
+  const all = [...state.shifts]
+    .filter((shift) => isInPeriod(shift.opened_at, view.period))
+    .sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at));
   const pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
   view.page = Math.min(Math.max(1, view.page), pages);
   const start = (view.page - 1) * PAGE_SIZE;
@@ -156,7 +159,7 @@ function historyHtml() {
       </nav></div>`;
   }
   return `<div class="sh-hist-head"><div><h2>Riwayat shift</h2><p>Catatan pembukaan dan penutupan shift kasir.</p></div>
-      <em class="sh-tag">${all.length} shift</em></div>${body}${foot}`;
+      <div class="sh-history-tools"><label class="pd-period"><span>Periode</span><select data-shift-period aria-label="Filter periode riwayat shift">${periodOptionsHtml(view.period)}</select></label><em class="sh-tag">${all.length} shift</em></div></div>${body}${foot}`;
 }
 
 function shell() {
@@ -181,6 +184,13 @@ function bind(root, actions) {
       const part = root.querySelector('[data-part="history"]');
       if (part) part.innerHTML = historyHtml();
     } else if (actions[act]) actions[act]();
+  });
+  root.addEventListener("change", (event) => {
+    if (!event.target.matches("[data-shift-period]")) return;
+    view.period = event.target.value;
+    view.page = 1;
+    const part = root.querySelector('[data-part="history"]');
+    if (part) part.innerHTML = historyHtml();
   });
 }
 

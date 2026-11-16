@@ -1,5 +1,6 @@
 import { state, categoryName, date, escape } from "../../state.js";
 import { editor } from "./common.js";
+import { isInPeriod, periodOptionsHtml } from "../../date-period.js";
 import {
   ApiError,
   submitStockOpnameRequest,
@@ -8,7 +9,7 @@ import {
 /* ---------- Halaman Persediaan: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
 // Filter bertahan selama sesi, termasuk saat refresh() membangun ulang halaman.
-const view = { q: "", status: "all", page: 1 };
+const view = { q: "", status: "all", page: 1, historyPage: 1, period: "all" };
 
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
@@ -129,10 +130,16 @@ function footHtml(total, pages, from, to) {
     </nav>`;
 }
 
-function shell() {
-  const isManager = state.role === "manager";
-  const opnameRows = state.stockOpnames.length
-    ? state.stockOpnames.map((opname) => {
+function opnameHistoryHtml() {
+  const all = [...state.stockOpnames]
+    .filter((opname) => isInPeriod(opname.submitted_at, view.period))
+    .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+  const pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  view.historyPage = Math.min(Math.max(1, view.historyPage), pages);
+  const start = (view.historyPage - 1) * PAGE_SIZE;
+  const slice = all.slice(start, start + PAGE_SIZE);
+  const rows = slice.length
+    ? slice.map((opname) => {
         const difference = Number(opname.difference || 0);
         const delta = difference > 0 ? `+${difference}` : String(difference);
         return `<tr>
@@ -144,7 +151,25 @@ function shell() {
           <td>${escape(date(opname.submitted_at))}</td>
         </tr>`;
       }).join("")
-    : `<tr><td class="pd-empty" colspan="6">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : "Belum ada catatan stock opname."}</td></tr>`;
+    : `<tr><td class="pd-empty" colspan="6">${state.stockOpnameLoadError ? "Riwayat stock opname gagal dimuat dari backend." : all.length || state.stockOpnames.length ? "Tidak ada catatan stock opname pada periode ini." : "Belum ada catatan stock opname."}</td></tr>`;
+  const countText = all.length
+    ? `Menampilkan ${start + 1}–${start + slice.length} dari ${all.length} catatan`
+    : "Menampilkan 0 catatan";
+  const button = (label, inner, page, disabled, active) =>
+    `<button type="button" class="pd-pg${active ? " on" : ""}" data-act="opname-page" data-page="${page}" aria-label="${label}"${active ? ' aria-current="page"' : ""}${disabled ? " disabled" : ""}>${inner}</button>`;
+  const pager = pages < 2
+    ? ""
+    : `<nav class="pd-pager" aria-label="Halaman riwayat stock opname">${button("Halaman sebelumnya", icons.prev, view.historyPage - 1, view.historyPage === 1)}${pageItems(view.historyPage, pages).map((page) => page === "…" ? '<span class="pd-gap">…</span>' : button(`Halaman ${page}`, page, page, false, page === view.historyPage)).join("")}${button("Halaman berikutnya", icons.next, view.historyPage + 1, view.historyPage === pages)}</nav>`;
+  return `<div class="pd-head stock-section-head so-history-head"><div><h2>Riwayat stock opname</h2><p>Hitungan fisik langsung menyesuaikan stok dan tercatat di sini.</p></div><label class="pd-period"><span>Periode</span><select data-opname-period aria-label="Filter periode riwayat stock opname">${periodOptionsHtml(view.period)}</select></label></div>
+      <div class="pd-scroll"><table class="pd-table so-table">
+        <thead><tr><th>Produk</th><th>Petugas</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th><th>Waktu</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      <div class="pd-foot"><span>${countText}</span>${pager}</div>`;
+}
+
+function shell() {
+  const isManager = state.role === "manager";
   return `
     <div class="pd-head">
       <div><h1>Stok</h1><p>Pantau persediaan dan catat hasil hitung fisik.</p></div>
@@ -170,13 +195,7 @@ function shell() {
       </div>
       <div class="pd-foot" data-part="foot"></div>
     </section>
-    ${isManager ? `<section class="pd-card">
-      <div class="pd-head stock-section-head"><div><h2>Riwayat stock opname</h2><p>Hitungan fisik langsung menyesuaikan stok dan tercatat di sini.</p></div></div>
-      <div class="pd-scroll"><table class="pd-table so-table">
-        <thead><tr><th>Produk</th><th>Petugas</th><th>Stok sistem</th><th>Stok fisik</th><th>Selisih</th><th>Waktu</th></tr></thead>
-        <tbody>${opnameRows}</tbody>
-      </table></div>
-    </section>` : ""}
+    ${isManager ? `<section class="pd-card" data-part="history">${opnameHistoryHtml()}</section>` : ""}
     <p class="pd-note">${icons.info}Garis penanda pada bar menunjukkan batas stok minimum.</p>`;
 }
 
@@ -196,6 +215,7 @@ function paint(root) {
   set("chips", chipsHtml());
   set("list", listHtml(slice));
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));
+  set("history", opnameHistoryHtml());
 }
 
 function openOpname(product, refresh) {
@@ -327,12 +347,20 @@ function bind(root, refresh) {
       const product = state.products.find((p) => String(p.id) === el.dataset.id);
       return openOpname(product, refresh);
     }
-    if (act === "status") {
+    if (act === "opname-page") {
+      view.historyPage = +el.dataset.page;
+    } else if (act === "status") {
       view.status = el.dataset.value;
       view.page = 1;
     } else if (act === "page") {
       view.page = +el.dataset.page;
     }
+    paint(root);
+  });
+  root.addEventListener("change", (e) => {
+    if (!e.target.matches("[data-opname-period]")) return;
+    view.period = e.target.value;
+    view.historyPage = 1;
     paint(root);
   });
   root.addEventListener("input", (e) => {

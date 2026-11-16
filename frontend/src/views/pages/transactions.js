@@ -2,11 +2,16 @@ import { state, money, date, escape } from "../../state.js";
 import { receipt } from "./common.js";
 import { cancelSaleRequest, salesRequest } from "../../api.js";
 import { continueSalePayment } from "../../payments.js";
+import { isInPeriod } from "../../date-period.js";
 
 /* ---------- Riwayat transaksi: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
 // Filter bertahan selama sesi, termasuk saat refresh() membangun ulang halaman.
-const view = { q: "", status: "all", page: 1 };
+const view = { q: "", status: "all", period: "all", page: 1 };
+function inSelectedPeriod(sale) {
+  const timestamp = sale.paid_at || sale.created_at;
+  return isInPeriod(timestamp, view.period);
+}
 
 const STATUS = {
   completed: { label: "Selesai", cls: "good" },
@@ -65,6 +70,9 @@ function filtered(all) {
           .includes(q)),
   );
 }
+function periodRows(all) {
+  return isManager() ? all.filter(inSelectedPeriod) : all;
+}
 function pageItems(cur, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const set = new Set([1, total, cur - 1, cur, cur + 1]);
@@ -97,10 +105,12 @@ function statsHtml(all) {
   const completedCount = all.filter(
     (sale) => sale.status === "completed" && sale.payment_status === "paid",
   ).length;
-  const pendingCount = all.filter((sale) => sale.status === "pending").length;
+  const cancelledCount = all.filter(
+    (sale) => statusOf(sale).label === "Dibatalkan",
+  ).length;
   return `<div class="pd-card pd-stat"><span>Total transaksi</span><strong>${all.length}</strong></div>
     <div class="pd-card pd-stat"><span>Selesai</span><strong>${completedCount}</strong></div>
-    <div class="pd-card pd-stat warn"><span>Menunggu pembayaran</span><strong>${pendingCount}</strong></div>`;
+    <div class="pd-card pd-stat warn"><span>Dibatalkan</span><strong>${cancelledCount}</strong></div>`;
 }
 function rowHtml(s) {
   const first = s.items[0];
@@ -156,6 +166,7 @@ function shell() {
     ${isManager() ? '<section class="tx-stats" data-part="stats"></section>' : ""}
     <section class="pd-card pd-filters">
       <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nomor struk atau produk" value="${escape(view.q)}" aria-label="Cari transaksi" autocomplete="off" /></label>
+      ${isManager() ? `<label class="tx-period"><span>Periode</span><select aria-label="Filter periode transaksi"><option value="all"${view.period === "all" ? " selected" : ""}>Semua waktu</option><option value="today"${view.period === "today" ? " selected" : ""}>Hari ini</option><option value="week"${view.period === "week" ? " selected" : ""}>Minggu ini</option><option value="month"${view.period === "month" ? " selected" : ""}>Bulan ini</option></select></label>` : ""}
       <div class="pd-chips" data-part="chips" role="group" aria-label="Filter status transaksi"></div>
     </section>
     <section class="pd-card">
@@ -178,7 +189,8 @@ function shell() {
 // Mengisi ulang bagian yang berubah tanpa merender ulang kolom pencarian (fokus tetap).
 function paint(root) {
   const all = visible();
-  const rows = filtered(all);
+  const scoped = periodRows(all);
+  const rows = filtered(scoped);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   view.page = Math.min(Math.max(1, view.page), pages);
   const start = (view.page - 1) * PAGE_SIZE;
@@ -187,9 +199,9 @@ function paint(root) {
     const el = root.querySelector(`[data-part="${part}"]`);
     if (el) el.innerHTML = html;
   };
-  set("stats", statsHtml(all));
-  set("chips", chipsHtml(all));
-  set("list", listHtml(slice, all.length > 0));
+  set("stats", statsHtml(scoped));
+  set("chips", chipsHtml(scoped));
+  set("list", listHtml(slice, scoped.length > 0));
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));
 }
 
@@ -252,6 +264,12 @@ function bind(root, refresh) {
   root.addEventListener("input", (e) => {
     if (!e.target.matches(".pd-search input")) return;
     view.q = e.target.value;
+    view.page = 1;
+    paint(root);
+  });
+  root.addEventListener("change", (e) => {
+    if (!e.target.matches(".tx-period select")) return;
+    view.period = e.target.value;
     view.page = 1;
     paint(root);
   });

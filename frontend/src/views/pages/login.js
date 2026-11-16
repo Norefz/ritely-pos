@@ -3,9 +3,6 @@ import { ApiError, loginRequest, warmBackendRequest } from "../../api.js";
 const svg = (path) =>
   `<svg class="lg-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 const icons = {
-  cart: svg(
-    '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 4h2.5l2.2 10.5h10.3L20 8H6.5"/>',
-  ),
   check: svg('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
   eye: svg(
     '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
@@ -26,7 +23,7 @@ function shell() {
   return `
     <div class="lg-wrap">
       <aside class="lg-side">
-        <div class="lg-brand"><i>${icons.cart}</i>Ritely</div>
+        <div class="lg-brand"><i><img src="./assets/images/ritely-cart-icon.png" alt=""></i><img class="lg-wordmark" src="./assets/images/ritely-wordmark.png" alt="Ritely"></div>
         <div class="lg-pitch">
           <h1>Kelola toko Anda dari satu tempat.</h1>
           <ul>${FEATURES.map((f) => `<li>${icons.check}${f}</li>`).join("")}</ul>
