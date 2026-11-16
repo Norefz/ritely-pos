@@ -204,7 +204,7 @@ function bind(root, refresh) {
     if (cancelButton) {
       const sale = state.sales.find((item) => item.sale_id === cancelButton.dataset.id);
       if (!sale) return;
-      void webix.confirm("Batalkan pesanan ini? Jika Midtrans belum mengonfirmasi, pesanan tetap diblokir di Ritely dan ditandai untuk rekonsiliasi.")
+      void webix.confirm("Batalkan pesanan ini?")
         .then(async () => {
           cancelButton.disabled = true;
           try {
@@ -216,7 +216,7 @@ function bind(root, refresh) {
               if (result.provider_cancelled === false) {
                 webix.message({
                   type: "error",
-                  text: "Pesanan dibatalkan di Ritely, tetapi Midtrans belum mengonfirmasi. Jangan bayarkan pesanan ini.",
+                  text: "Pesanan dibatalkan. Cek status Midtrans.",
                 });
               } else {
                 webix.message("Pesanan berhasil dibatalkan.");
