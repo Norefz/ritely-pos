@@ -20,5 +20,5 @@ export function productImageStyle(sku) {
   const imagePath = sheet
     ? "/assets/images/products-2.webp"
     : "/assets/images/products.webp";
-  return `--product-image-x:${column * 25}%;--product-image-y:${row * 25}%;--product-image-url:url("${imagePath}");`;
+  return `--product-image-x:${column * 25}%;--product-image-y:${row * 25}%;--product-image-url:url(${imagePath});`;
 }
