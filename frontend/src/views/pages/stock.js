@@ -162,8 +162,8 @@ function shell() {
       <div><h1>Stok</h1><p>Pantau persediaan dan catat hasil hitung fisik.</p></div>
       ${isManager ? `<div data-part="pill">${pillHtml()}</div>` : ""}
     </div>
-    ${isManager ? "" : `<section class="pd-card so-intro">${icons.info}<div><b>Stock opname</b><p>Hitung jumlah fisik barang. Setelah disimpan, stok sistem langsung disesuaikan.</p></div></section>`}
-    <section class="pd-card pd-stats" data-part="stats">${statsHtml()}</section>
+    ${isManager ? `<section class="pd-card so-intro">${icons.info}<div><b>Stock opname</b><p>Hitung jumlah fisik barang. Setelah disimpan, stok sistem langsung disesuaikan.</p></div></section>
+    <section class="pd-card pd-stats" data-part="stats">${statsHtml()}</section>` : ""}
     <section class="pd-card pd-filters">
       <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nama atau SKU" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
       <div class="pd-chips" data-part="chips" role="group" aria-label="Filter status stok">${chipsHtml()}</div>
