@@ -1,6 +1,6 @@
 import { state, money, date, escape } from "../../state.js";
 import { receipt } from "./common.js";
-import { cancelSaleRequest } from "../../api.js";
+import { cancelSaleRequest, salesRequest } from "../../api.js";
 import { continueSalePayment } from "../../payments.js";
 
 /* ---------- Riwayat transaksi: konfigurasi & helper ---------- */
@@ -233,6 +233,31 @@ function bind(root, refresh) {
 }
 
 export function transactions(refresh = () => {}) {
+  let statusSyncTimer = null;
+  let statusSyncBusy = false;
+  let destroyed = false;
+
+  const syncSalesSnapshot = async (root) => {
+    if (statusSyncBusy || destroyed) return;
+    statusSyncBusy = true;
+    try {
+      const previous = new Map(state.sales.map((sale) => [sale.sale_id, `${sale.status}:${sale.payment_status}`]));
+      const response = await salesRequest();
+      if (destroyed) return;
+      state.sales = response.sales;
+      const changed = previous.size !== response.sales.length
+        || response.sales.some((sale) => previous.get(sale.sale_id) !== `${sale.status}:${sale.payment_status}`);
+      if (changed && !destroyed) {
+        paint(root);
+        refresh();
+      }
+    } catch {
+      // Keep the stored rows visible and retry on the next refresh interval.
+    } finally {
+      statusSyncBusy = false;
+    }
+  };
+
   return {
     view: "template",
     css: "product-page",
@@ -240,8 +265,16 @@ export function transactions(refresh = () => {}) {
     template: shell,
     on: {
       onAfterRender() {
+        destroyed = false;
+        if (statusSyncTimer) clearInterval(statusSyncTimer);
         paint(this.$view);
         bind(this.$view, refresh);
+        void syncSalesSnapshot(this.$view);
+        statusSyncTimer = setInterval(() => void syncSalesSnapshot(this.$view), 15000);
+      },
+      onDestruct() {
+        destroyed = true;
+        if (statusSyncTimer) clearInterval(statusSyncTimer);
       },
     },
   };
