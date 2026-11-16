@@ -401,7 +401,11 @@ export function pos(refresh) {
         view.paymentMethod = "cash";
         refresh();
         if (method === "online") {
-          if (result.snap_token) await openSnapPayment(sale, result.snap_token, refresh);
+          if (result.snap_token) {
+            view.submitting = false;
+            if (!root.$destructed) paint(root);
+            void openSnapPayment(sale, result.snap_token, refresh);
+          }
           else webix.message({ type: "error", text: "Sesi pembayaran belum tersedia. Periksa status transaksi di Riwayat transaksi." });
         } else {
           for (const item of sale.items) {
