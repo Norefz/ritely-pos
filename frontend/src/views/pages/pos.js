@@ -132,7 +132,7 @@ function shell() {
             <div class="ps-label">Metode pembayaran</div>
             <div class="ps-methods">
               <button type="button" class="ps-method${view.paymentMethod === "cash" ? " on" : ""}" data-act="method" data-value="cash" aria-pressed="${view.paymentMethod === "cash"}">Tunai</button>
-              <button type="button" class="ps-method${view.paymentMethod === "online" ? " on" : ""}" data-act="method" data-value="online" aria-pressed="${view.paymentMethod === "online"}"${onlinePaymentsEnabled() ? "" : ' disabled title="Midtrans Sandbox belum dikonfigurasi di backend"'}>Online (Midtrans Sandbox)</button>
+              <button type="button" class="ps-method${view.paymentMethod === "online" ? " on" : ""}" data-act="method" data-value="online" aria-pressed="${view.paymentMethod === "online"}"${onlinePaymentsEnabled() ? "" : ' disabled title="Midtrans Sandbox belum dikonfigurasi di backend"'}>Non tunai</button>
             </div>
             <label class="ps-cash"${view.paymentMethod === "online" ? " hidden" : ""}><span>Uang diterima</span><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off" placeholder="Nominal diterima" value="${escape(view.cash)}" /></label>
             <div class="ps-change" data-part="change" aria-live="polite"${view.paymentMethod === "online" ? " hidden" : ""}></div>
