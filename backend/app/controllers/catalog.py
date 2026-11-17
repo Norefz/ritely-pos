@@ -14,6 +14,7 @@ from app.database.catalog import (
     get_stock_opnames_collection,
 )
 from app.database.mongo import get_client
+from app.database.shifts import get_shifts_collection
 from app.middleware.auth import authenticate_request, manager_required
 from app.services.catalog_service import (
     CatalogItemNotFoundError,
@@ -414,6 +415,17 @@ def post_stock_opname():
         client = _mongo_client()
         with client.start_session() as session:
             with session.start_transaction():
+                if user["role"] == "cashier":
+                    open_shift = get_shifts_collection().find_one(
+                        {
+                            "cashier_id": user["_id"],
+                            "status": "open",
+                        },
+                        {"_id": 1},
+                        session=session,
+                    )
+                    if not open_shift:
+                        return jsonify(error="shift_not_open"), 409
                 opname = submit_opname(
                     opnames_collection,
                     products_collection,

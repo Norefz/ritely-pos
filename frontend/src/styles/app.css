@@ -2295,7 +2295,7 @@ small {
 }
 .sk-opname-submit:disabled {
   opacity: 0.65;
-  cursor: wait;
+  cursor: not-allowed;
 }
 .sk-prod b {
   display: block;

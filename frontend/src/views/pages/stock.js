@@ -34,6 +34,14 @@ function physicalStock(p) {
   if (Number.isInteger(p.physicalStock)) return p.physicalStock;
   return p.stock;
 }
+function canAdjustStock() {
+  if (state.role === "manager") return true;
+  return (
+    state.role === "cashier" &&
+    state.shift?.status === "open" &&
+    String(state.shift.cashier_id) === String(state.currentUser?.id)
+  );
+}
 function filtered() {
   const q = view.q.trim().toLowerCase();
   return state.products.filter(
@@ -93,6 +101,7 @@ function rowHtml(p) {
   const id = escape(String(p.id));
   const name = escape(p.name);
   const counted = physicalStock(p);
+  const canAdjust = canAdjustStock();
   return `<tr>
     <td><div class="sk-prod"><b>${escape(p.name)}</b><small>${escape(p.sku)}</small></div></td>
     <td>${escape(categoryName(p.category))}</td>
@@ -100,7 +109,7 @@ function rowHtml(p) {
     <td class="sk-physical-value">${counted}</td>
     <td class="sk-min">${p.minimum}</td>
     <td>${stockTag(p)}</td>
-    <td class="pd-act"><button type="button" class="pd-edit sk-opname-submit" data-act="opname-product" data-id="${id}" aria-label="Sesuaikan stok ${name}">${icons.pencil}Sesuaikan stok</button></td>
+    <td class="pd-act"><button type="button" class="pd-edit sk-opname-submit" data-act="opname-product" data-id="${id}" aria-label="${canAdjust ? `Sesuaikan stok ${name}` : "Buka shift untuk menyesuaikan stok"}"${canAdjust ? "" : ' disabled title="Buka shift terlebih dahulu untuk menyesuaikan stok."'}>${icons.pencil}${canAdjust ? "Sesuaikan stok" : "Buka shift dulu"}</button></td>
   </tr>`;
 }
 function listHtml(rows) {
@@ -220,6 +229,10 @@ function paint(root) {
 
 function openOpname(product, refresh) {
   if (!product) return;
+  if (!canAdjustStock()) {
+    webix.message({ type: "error", text: "Buka shift terlebih dahulu untuk menyesuaikan stok." });
+    return;
+  }
   const systemStock = product.stock;
   const countedStock = physicalStock(product);
   const formatDifference = (nextSystemStock) => {
@@ -324,6 +337,7 @@ function openOpname(product, refresh) {
             invalid_stock_opname: error.message,
             unauthorized: "Sesi login tidak berlaku. Keluar lalu login kembali.",
             forbidden: "Akun ini tidak memiliki akses stock opname.",
+            shift_not_open: "Buka shift terlebih dahulu untuk menyesuaikan stok.",
             server_unreachable: "Backend tidak dapat dijangkau. Pastikan server lokal masih berjalan.",
           };
           message = knownErrors[error.code]
