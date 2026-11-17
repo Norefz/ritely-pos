@@ -90,14 +90,6 @@ function mountApplication() {
       {
         rows: [
           navbar(state.role, logout),
-          {
-            view: "template",
-            id: "dataStatus",
-            height: 42,
-            css: "data-status-banner",
-            borderless: true,
-            template: "Memuat katalog, shift, dan stock opname…",
-          },
           { view: "layout", id: "contentHost", rows: [] },
         ],
       },
@@ -225,15 +217,11 @@ async function hydrateApplicationData() {
     loadPaymentConfig(),
   ]);
 
-  const status = $$("dataStatus");
-  if (status) {
-    status.define(
-      "template",
-      state.catalogLoadError
-        ? "Katalog gagal dimuat dari backend · Periksa koneksi, lalu muat ulang halaman."
-        : `Katalog, shift, stok, dan transaksi terhubung ke backend · Pembayaran online ${state.paymentOnlineEnabled ? "Midtrans Sandbox siap" : "belum dikonfigurasi"}.`,
-    );
-    status.refresh();
+  if (state.catalogLoadError) {
+    webix.message({
+      type: "error",
+      text: "Katalog gagal dimuat dari backend. Periksa koneksi lalu muat ulang halaman.",
+    });
   }
   if ($$("contentHost")) refresh();
 }

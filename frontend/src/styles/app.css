@@ -455,12 +455,6 @@ small {
   font-size: 9px;
   letter-spacing: 0.06em;
 }
-.data-status-banner .webix_template {
-  background: #eff6ff;
-  color: #1e40af;
-  padding: 10px 24px;
-  font-size: 13px;
-}
 .page-heading .webix_template {
   padding: 9px 0;
 }
@@ -576,10 +570,6 @@ small {
   .metrics small {
     font-size: 11px;
   }
-  .data-status-banner .webix_template {
-    padding: 8px 12px;
-    font-size: 11px;
-  }
   .page-heading p {
     font-size: 12px;
   }
@@ -604,10 +594,6 @@ small {
   color: #526175;
 }
 @media (max-width: 700px) {
-  .data-status-banner .webix_template {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
   .webix_el_label {
     font-size: 12px;
   }
