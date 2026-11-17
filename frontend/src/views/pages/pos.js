@@ -114,7 +114,7 @@ function shell() {
   return `
     <div class="ps-wrap">
       <div class="ps-top">
-        <label class="pd-search">${icons.search}<input type="search" placeholder="Cari produk atau scan barcode" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
+        <label class="pd-search">${icons.search}<input type="search" placeholder="Cari produk" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
         <span class="ps-shift${open && !shiftEnded ? " on" : ""}"><span></span>${open ? `${escape(shiftType(openShift).replace("_", " "))} · ${shiftEnded ? "waktu shift berakhir" : `terbuka sejak ${since} WIB`}` : otherShift ? `Shift ${escape(state.shift.cashier)} masih terbuka` : openAllowed ? "Shift belum dibuka" : `Jadwal ${assignedWindow?.label || "—"} WIB`}</span>
         ${shiftEnded ? `<button type="button" class="sh-btn primary" data-act="manage-shift">Tutup shift</button>` : open || otherShift || !openAllowed ? "" : `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`}
       </div>
