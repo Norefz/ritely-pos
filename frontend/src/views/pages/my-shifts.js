@@ -270,7 +270,7 @@ export function myShifts(refresh) {
       if (!canOpenShift(cashier()?.assigned_shift)) {
         webix.message({
           type: "error",
-          text: shiftError({ code: "outside_shift_window" }),
+          text: shiftError({ code: "invalid_shift" }),
         });
         return;
       }

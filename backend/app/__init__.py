@@ -6,7 +6,9 @@ from flask import Flask, abort, jsonify, send_from_directory
 from flask_cors import CORS
 
 from app.config import Config
+from app.commands import register_commands
 from app.controllers.auth import auth_bp
+from app.controllers.audit import audit_bp
 from app.controllers.catalog import catalog_bp
 from app.controllers.health import health_bp
 from app.controllers.shifts import shifts_bp
@@ -33,10 +35,12 @@ def create_app(config_object=Config):
     )
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(audit_bp)
     app.register_blueprint(catalog_bp)
     app.register_blueprint(shifts_bp)
     app.register_blueprint(sales_bp)
     app.register_blueprint(users_bp)
+    register_commands(app)
 
     @app.get("/")
     def index():

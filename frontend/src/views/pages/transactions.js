@@ -1,11 +1,17 @@
 import { state, money, date, escape } from "../../state.js";
 import { receipt } from "./common.js";
+import { cancelSaleRequest, salesRequest } from "../../api.js";
 import { continueSalePayment } from "../../payments.js";
+import { isInPeriod } from "../../date-period.js";
 
 /* ---------- Riwayat transaksi: konfigurasi & helper ---------- */
 const PAGE_SIZE = 10;
 // Filter bertahan selama sesi, termasuk saat refresh() membangun ulang halaman.
-const view = { q: "", status: "all", page: 1 };
+const view = { q: "", status: "all", period: "all", page: 1 };
+function inSelectedPeriod(sale) {
+  const timestamp = sale.paid_at || sale.created_at;
+  return isInPeriod(timestamp, view.period);
+}
 
 const STATUS = {
   completed: { label: "Selesai", cls: "good" },
@@ -42,7 +48,15 @@ const visible = () =>
   [...state.sales]
     .filter((s) => isManager() || s.cashier_id === state.currentUser?.id)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-const statusOf = (s) => STATUS[s.status] || { label: s.status, cls: "" };
+const statusOf = (s) => {
+  if (s.payment_cancellation_status === "unconfirmed") {
+    return { label: "Dibatalkan", cls: "empty" };
+  }
+  if (s.reconciliation_status === "pending" && s.payment_status === "paid") {
+    return { label: "Perlu rekonsiliasi", cls: "warning" };
+  }
+  return STATUS[s.status] || { label: s.status, cls: "" };
+};
 const columns = () => (isManager() ? 8 : 7);
 
 function filtered(all) {
@@ -55,6 +69,9 @@ function filtered(all) {
           .toLowerCase()
           .includes(q)),
   );
+}
+function periodRows(all) {
+  return isManager() ? all.filter(inSelectedPeriod) : all;
 }
 function pageItems(cur, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -83,6 +100,18 @@ function chipsHtml(all) {
     return `<button type="button" class="pd-chip${view.status === value ? " on" : ""}" data-act="status" data-value="${value}" aria-pressed="${view.status === value}">${value === "pending" ? '<span class="pd-dot"></span>' : ""}${label} <i>${count}</i></button>`;
   }).join("");
 }
+function statsHtml(all) {
+  if (!isManager()) return "";
+  const completedCount = all.filter(
+    (sale) => sale.status === "completed" && sale.payment_status === "paid",
+  ).length;
+  const cancelledCount = all.filter(
+    (sale) => statusOf(sale).label === "Dibatalkan",
+  ).length;
+  return `<div class="pd-card pd-stat"><span>Total transaksi</span><strong>${all.length}</strong></div>
+    <div class="pd-card pd-stat"><span>Selesai</span><strong>${completedCount}</strong></div>
+    <div class="pd-card pd-stat warn"><span>Dibatalkan</span><strong>${cancelledCount}</strong></div>`;
+}
 function rowHtml(s) {
   const first = s.items[0];
   const more = s.items.length - 1;
@@ -97,7 +126,7 @@ function rowHtml(s) {
     <td><span class="tx-method${online ? " online" : ""}">${icons.wallet}${online ? "Online" : "Tunai"}</span></td>
     <td class="pd-r tx-total">${money(s.total)}</td>
     <td><span class="stock-tag ${st.cls}">${escape(st.label)}</span></td>
-    <td class="pd-act">${pending && online ? `<button type="button" class="pd-edit" data-act="continue" data-id="${escape(String(s.sale_id))}" aria-label="Lanjutkan pembayaran ${escape(s.id)}">Lanjutkan pembayaran</button>` : `<button type="button" class="pd-edit" data-act="open" data-id="${escape(String(s.id))}" aria-label="Lihat struk ${escape(s.id)}">${icons.receipt}Lihat struk</button>`}</td>
+    <td class="pd-act">${pending && online ? `<div class="tx-actions"><button type="button" class="pd-edit" data-act="continue" data-id="${escape(String(s.sale_id))}" aria-label="Lanjutkan pembayaran ${escape(s.id)}">Lanjutkan pembayaran</button><button type="button" class="pd-edit tx-cancel" data-act="cancel" data-id="${escape(String(s.sale_id))}" aria-label="Batalkan pesanan ${escape(s.id)}">Batalkan pesanan</button></div>` : `<button type="button" class="pd-edit" data-act="open" data-id="${escape(String(s.id))}" aria-label="Lihat struk ${escape(s.id)}">${icons.receipt}Lihat struk</button>`}</td>
   </tr>`;
 }
 function listHtml(rows, hasAny) {
@@ -134,8 +163,10 @@ function shell() {
       <div><h1>Riwayat transaksi</h1><p>Transaksi tersimpan di database. Pembayaran online baru selesai setelah status Midtrans terverifikasi.</p></div>
       <span class="pd-pill"><span class="pd-pill-dot tx-dot"></span>${isManager() ? "Semua transaksi" : "Hanya transaksi saya"}</span>
     </div>
+    ${isManager() ? '<section class="tx-stats" data-part="stats"></section>' : ""}
     <section class="pd-card pd-filters">
       <label class="pd-search">${icons.search}<input type="search" placeholder="Cari nomor struk atau produk" value="${escape(view.q)}" aria-label="Cari transaksi" autocomplete="off" /></label>
+      ${isManager() ? `<label class="tx-period"><span>Periode</span><select aria-label="Filter periode transaksi"><option value="all"${view.period === "all" ? " selected" : ""}>Semua waktu</option><option value="today"${view.period === "today" ? " selected" : ""}>Hari ini</option><option value="week"${view.period === "week" ? " selected" : ""}>Minggu ini</option><option value="month"${view.period === "month" ? " selected" : ""}>Bulan ini</option></select></label>` : ""}
       <div class="pd-chips" data-part="chips" role="group" aria-label="Filter status transaksi"></div>
     </section>
     <section class="pd-card">
@@ -158,7 +189,8 @@ function shell() {
 // Mengisi ulang bagian yang berubah tanpa merender ulang kolom pencarian (fokus tetap).
 function paint(root) {
   const all = visible();
-  const rows = filtered(all);
+  const scoped = periodRows(all);
+  const rows = filtered(scoped);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   view.page = Math.min(Math.max(1, view.page), pages);
   const start = (view.page - 1) * PAGE_SIZE;
@@ -167,8 +199,9 @@ function paint(root) {
     const el = root.querySelector(`[data-part="${part}"]`);
     if (el) el.innerHTML = html;
   };
-  set("chips", chipsHtml(all));
-  set("list", listHtml(slice, all.length > 0));
+  set("stats", statsHtml(scoped));
+  set("chips", chipsHtml(scoped));
+  set("list", listHtml(slice, scoped.length > 0));
   set("foot", footHtml(rows.length, pages, start + 1, start + slice.length));
 }
 
@@ -191,6 +224,38 @@ function bind(root, refresh) {
       if (sale) void continueSalePayment(sale, refresh);
       return;
     }
+    const cancelButton = e.target.closest('[data-act="cancel"]');
+    if (cancelButton) {
+      const sale = state.sales.find((item) => item.sale_id === cancelButton.dataset.id);
+      if (!sale) return;
+      void webix.confirm("Batalkan pesanan ini?")
+        .then(async () => {
+          cancelButton.disabled = true;
+          try {
+            const result = await cancelSaleRequest(sale.sale_id);
+            const index = state.sales.findIndex((item) => item.sale_id === result.sale.sale_id);
+            if (index >= 0) state.sales[index] = result.sale;
+            refresh();
+            if (result.cancelled) {
+              webix.message("Pesanan berhasil dibatalkan.");
+            } else if (result.sale.status === "completed" || result.sale.payment_status === "paid") {
+              webix.message({ type: "error", text: "Pembayaran sudah berhasil, pesanan tidak dapat dibatalkan." });
+            } else if (result.sale.status === "expired" || result.sale.payment_status === "expired") {
+              webix.message("Pembayaran sudah kedaluwarsa. Status pesanan diperbarui.");
+            } else if (result.sale.status === "voided") {
+              webix.message("Pesanan berhasil dibatalkan.");
+            } else {
+              cancelButton.disabled = false;
+              webix.message({ type: "error", text: "Status pembayaran masih menunggu konfirmasi Midtrans. Coba lagi sebentar." });
+            }
+          } catch (error) {
+            cancelButton.disabled = false;
+            webix.message({ type: "error", text: error?.message || "Pesanan gagal dibatalkan. Coba lagi." });
+          }
+        })
+        .catch(() => {});
+      return;
+    }
     const row = e.target.closest("tr[data-id]");
     if (!row) return;
     const sale = state.sales.find((s) => String(s.id) === row.dataset.id);
@@ -202,9 +267,40 @@ function bind(root, refresh) {
     view.page = 1;
     paint(root);
   });
+  root.addEventListener("change", (e) => {
+    if (!e.target.matches(".tx-period select")) return;
+    view.period = e.target.value;
+    view.page = 1;
+    paint(root);
+  });
 }
 
 export function transactions(refresh = () => {}) {
+  let statusSyncTimer = null;
+  let statusSyncBusy = false;
+  let destroyed = false;
+
+  const syncSalesSnapshot = async (root) => {
+    if (statusSyncBusy || destroyed) return;
+    statusSyncBusy = true;
+    try {
+      const previous = new Map(state.sales.map((sale) => [sale.sale_id, `${sale.status}:${sale.payment_status}`]));
+      const response = await salesRequest();
+      if (destroyed) return;
+      state.sales = response.sales;
+      const changed = previous.size !== response.sales.length
+        || response.sales.some((sale) => previous.get(sale.sale_id) !== `${sale.status}:${sale.payment_status}`);
+      if (changed && !destroyed) {
+        paint(root);
+        refresh();
+      }
+    } catch {
+      // Keep the stored rows visible and retry on the next refresh interval.
+    } finally {
+      statusSyncBusy = false;
+    }
+  };
+
   return {
     view: "template",
     css: "product-page",
@@ -212,8 +308,16 @@ export function transactions(refresh = () => {}) {
     template: shell,
     on: {
       onAfterRender() {
+        destroyed = false;
+        if (statusSyncTimer) clearInterval(statusSyncTimer);
         paint(this.$view);
         bind(this.$view, refresh);
+        void syncSalesSnapshot(this.$view);
+        statusSyncTimer = setInterval(() => void syncSalesSnapshot(this.$view), 15000);
+      },
+      onDestruct() {
+        destroyed = true;
+        if (statusSyncTimer) clearInterval(statusSyncTimer);
       },
     },
   };

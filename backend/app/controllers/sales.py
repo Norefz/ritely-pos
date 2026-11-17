@@ -128,6 +128,7 @@ def _public_sale(document):
         "paid_at": _iso(document.get("paid_at")),
         "payment_expired_at": _iso(document.get("payment_expired_at")),
         "reconciliation_status": document.get("reconciliation_status"),
+        "payment_cancellation_status": document.get("payment_cancellation_status"),
         "cash": _number(document["cash_received"]) if document.get("cash_received") is not None else 0,
         "change": _number(document["change"]) if document.get("change") is not None else 0,
     }
@@ -372,7 +373,9 @@ def _provider_state(payload):
         return "failed"
     if state == "deny":
         return "failed"
-    if state in {"expire", "cancel"}:
+    if state == "cancel":
+        return "cancelled"
+    if state == "expire":
         return "expired"
     if state == "pending":
         return "pending"
@@ -421,6 +424,32 @@ def _apply_provider_status(database, sale, payload, actor_id=None):
                        {"source": "system", "payment_order_id": order_id})
         return sales.find_one({"_id": sale["_id"]})
 
+    if provider_status == "cancelled":
+        if sale["status"] == "pending":
+            result = sales.update_one(
+                {"_id": sale["_id"], "status": "pending",
+                 "payment_status": {"$in": ["creating", "pending", "unknown"]}},
+                {"$set": {
+                    "status": "voided", "payment_status": "failed",
+                    "void_reason": "Transaksi dibatalkan oleh Midtrans.",
+                    "voided_by": None, "voided_at": now,
+                    **({"payment_reference": reference} if reference else {}),
+                }},
+            )
+            if result.modified_count:
+                _audit(database, actor_id or sale["cashier_id"], "payment_cancelled", sale,
+                       {"source": "midtrans", "payment_order_id": order_id})
+        elif sale.get("payment_cancellation_status") == "unconfirmed":
+            result = sales.update_one(
+                {"_id": sale["_id"], "status": "voided", "payment_cancellation_status": "unconfirmed"},
+                {"$set": {"payment_cancellation_status": "confirmed"},
+                 "$unset": {"reconciliation_status": ""}},
+            )
+            if result.modified_count:
+                _audit(database, actor_id or sale["cashier_id"], "sale_cancellation_confirmed", sale,
+                       {"source": "midtrans", "payment_order_id": order_id})
+        return sales.find_one({"_id": sale["_id"]})
+
     if provider_status == "expired":
         if sale["status"] == "pending":
             sales.update_one(
@@ -432,6 +461,15 @@ def _apply_provider_status(database, sale, payload, actor_id=None):
             )
             _audit(database, actor_id or sale["cashier_id"], "payment_expired", sale,
                    {"payment_order_id": order_id})
+        elif sale.get("payment_cancellation_status") == "unconfirmed":
+            result = sales.update_one(
+                {"_id": sale["_id"], "status": "voided", "payment_cancellation_status": "unconfirmed"},
+                {"$set": {"payment_cancellation_status": "confirmed"},
+                 "$unset": {"reconciliation_status": ""}},
+            )
+            if result.modified_count:
+                _audit(database, actor_id or sale["cashier_id"], "sale_cancellation_confirmed", sale,
+                       {"source": "midtrans_expiration", "payment_order_id": order_id})
         return sales.find_one({"_id": sale["_id"]})
 
     if provider_status == "paid":
@@ -445,10 +483,19 @@ def _apply_provider_status(database, sale, payload, actor_id=None):
                        {"payment_order_id": order_id, "incoming_status": "paid"})
                 return sale
             if _provider_state(verified) == "paid":
-                _audit(database, actor_id or sale["cashier_id"], "payment_late_detected", sale,
-                       {"payment_order_id": order_id, "payment_reference": reference,
-                        "reason": "provider_status_conflict_after_void"})
-            return sale
+                result = sales.update_one(
+                    {"_id": sale["_id"], "status": "voided", "payment_status": {"$ne": "paid"}},
+                    {"$set": {
+                        "payment_status": "paid",
+                        "reconciliation_status": "pending",
+                        **({"payment_reference": reference} if reference else {}),
+                    }},
+                )
+                if result.modified_count:
+                    _audit(database, actor_id or sale["cashier_id"], "payment_late_detected", sale,
+                           {"payment_order_id": order_id, "payment_reference": reference,
+                            "reason": "provider_status_conflict_after_void"})
+            return sales.find_one({"_id": sale["_id"]}) or sale
         # Late payments and payments arriving after a closed shift are held for reconciliation.
         shift = database["shifts"].find_one({"_id": sale["shift_id"]})
         if sale["status"] == "expired" or not shift or shift["status"] != "open":
@@ -514,6 +561,55 @@ def _apply_provider_status(database, sale, payload, actor_id=None):
     return sales.find_one({"_id": sale["_id"]})
 
 
+def _refresh_expired_sales(database, rows, actor_id):
+    now = datetime.now(timezone.utc)
+    checked_before = now - timedelta(seconds=30)
+    checks = 0
+    for sale in rows:
+        if checks >= 1:
+            break
+        expires_at = sale.get("payment_expired_at")
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if (
+            sale.get("payment_method") != "online"
+            or sale.get("status") != "pending"
+            or sale.get("payment_status") not in {"pending", "unknown"}
+            or not expires_at
+            or expires_at > now
+        ):
+            continue
+        claim = database["sales"].find_one_and_update(
+            {
+                "_id": sale["_id"],
+                "status": "pending",
+                "payment_status": {"$in": ["pending", "unknown"]},
+                "payment_expired_at": {"$lte": now},
+                "$or": [
+                    {"payment_status_checked_at": {"$exists": False}},
+                    {"payment_status_checked_at": {"$lte": checked_before}},
+                ],
+            },
+            {"$set": {"payment_status_checked_at": now}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not claim:
+            continue
+        checks += 1
+        try:
+            provider = midtrans.get_transaction_status(claim["payment_order_id"])
+            _apply_provider_status(database, claim, provider, actor_id)
+        except midtrans.MidtransNotFound:
+            continue
+        except midtrans.MidtransError:
+            continue
+        except CheckoutError:
+            current_app.logger.warning(
+                "Could not reconcile expired payment for sale %s",
+                sale["receipt_number"],
+            )
+
+
 @sales_bp.get("/payments/config")
 def payments_config():
     user, error = _authorized_user()
@@ -530,6 +626,8 @@ def get_sales():
     try:
         _client, database = _database()
         query = {} if user["role"] == "manager" else {"cashier_id": user["_id"]}
+        rows = list(database["sales"].find(query).sort("created_at", -1).limit(500))
+        _refresh_expired_sales(database, rows, user["_id"])
         rows = database["sales"].find(query).sort("created_at", -1).limit(500)
         return jsonify(sales=[_public_sale(row) for row in rows]), 200
     except PyMongoError:
@@ -642,6 +740,238 @@ def continue_payment(sale_id):
         return jsonify(error=error.code, message=str(error)), error.status
     except PyMongoError:
         current_app.logger.exception("Could not continue sale payment")
+        return jsonify(error="database_unavailable"), 503
+
+
+def _mark_sale_cancelled(database, sale, user, provider=None):
+    now = datetime.now(timezone.utc)
+    updates = {
+        "status": "voided",
+        "payment_status": "failed",
+        "void_reason": "Pesanan dibatalkan oleh pengguna.",
+        "voided_by": user["_id"],
+        "voided_at": now,
+    }
+    if provider and provider.get("transaction_id"):
+        updates["payment_reference"] = provider["transaction_id"]
+    result = database["sales"].update_one(
+        {
+            "_id": sale["_id"],
+            "status": "pending",
+            "payment_status": {"$in": ["not_started", "pending", "unknown"]},
+        },
+        {"$set": updates},
+    )
+    if result.modified_count:
+        _audit(database, user["_id"], "sale_cancelled", sale,
+               {"source": "user", "payment_order_id": sale.get("payment_order_id")})
+    return database["sales"].find_one({"_id": sale["_id"]}) or sale
+
+
+def _force_cancel_sale(database, sale, user):
+    now = datetime.now(timezone.utc)
+    result = database["sales"].update_one(
+        {
+            "_id": sale["_id"],
+            "status": "pending",
+            "payment_status": {"$in": ["not_started", "pending", "unknown"]},
+        },
+        {"$set": {
+            "status": "voided",
+            "payment_status": "failed",
+            "void_reason": "Pesanan dibatalkan di Ritely; status Midtrans belum terkonfirmasi.",
+            "voided_by": user["_id"],
+            "voided_at": now,
+            "reconciliation_status": "pending",
+            "payment_cancellation_status": "unconfirmed",
+        }},
+    )
+    if result.modified_count:
+        _audit(database, user["_id"], "sale_force_cancelled", sale,
+               {"source": "user", "payment_order_id": sale.get("payment_order_id"),
+                "provider_confirmation": "unconfirmed"})
+    return database["sales"].find_one({"_id": sale["_id"]}) or sale
+
+
+@sales_bp.post("/sales/<sale_id>/cancel")
+def cancel_sale(sale_id):
+    user, error = _authorized_user()
+    if error:
+        return error
+    try:
+        _client, database = _database()
+        sale = _sale_access(database, sale_id, user)
+        if sale["payment_method"] != "online" or sale["status"] != "pending":
+            return jsonify(error="sale_not_pending", sale=_public_sale(sale)), 409
+        if sale.get("payment_status") == "creating":
+            return jsonify(error="payment_session_creating", sale=_public_sale(sale)), 409
+
+        if sale.get("payment_status") == "not_started" and not sale.get("snap_token"):
+            cancelled_sale = _mark_sale_cancelled(database, sale, user)
+            return jsonify(
+                sale=_public_sale(cancelled_sale),
+                cancelled=cancelled_sale["status"] == "voided",
+                provider_cancelled=True,
+            ), 200
+
+        def apply_matching_status(payload):
+            if payload.get("order_id") != sale["payment_order_id"]:
+                current_app.logger.warning(
+                    "Ignoring mismatched Midtrans order status for sale %s",
+                    sale["receipt_number"],
+                )
+                return sale
+            return _apply_provider_status(database, sale, payload, user["_id"])
+
+        def force_cancel_response():
+            cancelled_sale = _force_cancel_sale(database, sale, user)
+            is_cancelled = cancelled_sale["status"] == "voided"
+            return jsonify(
+                sale=_public_sale(cancelled_sale),
+                cancelled=is_cancelled,
+                provider_cancelled=False,
+                reconciliation_required=is_cancelled,
+            ), 200
+
+        snap_session_cancelled = False
+        if sale.get("snap_token"):
+            try:
+                midtrans.cancel_snap_session(sale["snap_token"])
+                snap_session_cancelled = True
+            except midtrans.MidtransError as error:
+                # A missing token is already unusable; other errors may mean the
+                # customer is completing payment, so verify transaction status below.
+                snap_session_cancelled = error.status_code == 404
+
+        try:
+            provider = midtrans.get_transaction_status(sale["payment_order_id"])
+        except midtrans.MidtransNotFound:
+            if snap_session_cancelled:
+                cancelled_sale = _mark_sale_cancelled(database, sale, user)
+                return jsonify(
+                    sale=_public_sale(cancelled_sale),
+                    cancelled=cancelled_sale["status"] == "voided",
+                    provider_cancelled=True,
+                ), 200
+            return force_cancel_response()
+        except midtrans.MidtransError:
+            return force_cancel_response()
+
+        provider_state = _provider_state(provider)
+        if provider_state == "paid":
+            updated_sale = apply_matching_status(provider)
+            if updated_sale["status"] == "pending":
+                return force_cancel_response()
+            return jsonify(sale=_public_sale(updated_sale), cancelled=False), 200
+        if provider_state != "pending":
+            updated_sale = apply_matching_status(provider)
+            if updated_sale["status"] == "pending":
+                return force_cancel_response()
+            return jsonify(
+                sale=_public_sale(updated_sale),
+                cancelled=updated_sale["status"] == "voided",
+                provider_cancelled=True,
+            ), 200
+
+        try:
+            cancelled = midtrans.cancel_transaction(sale["payment_order_id"])
+        except midtrans.MidtransError as provider_error:
+            current_app.logger.info(
+                "Midtrans cancel request did not complete for %s (HTTP/status %s)",
+                sale["receipt_number"], provider_error.status_code or "unknown",
+            )
+            cancelled = None
+
+        if cancelled and cancelled.get("transaction_status", "").lower() == "cancel":
+            response_order_id = cancelled.get("order_id")
+            if response_order_id and response_order_id != sale["payment_order_id"]:
+                current_app.logger.warning(
+                    "Ignoring mismatched Midtrans cancel response for sale %s",
+                    sale["receipt_number"],
+                )
+            else:
+                amount = cancelled.get("gross_amount")
+                if amount is not None:
+                    try:
+                        amount_matches = Decimal(str(amount)) == _decimal(sale["total"])
+                    except InvalidOperation:
+                        amount_matches = False
+                    if not amount_matches:
+                        raise CheckoutError("payment_amount_mismatch", 400)
+                cancelled_sale = _mark_sale_cancelled(database, sale, user, cancelled)
+                return jsonify(
+                    sale=_public_sale(cancelled_sale),
+                    cancelled=cancelled_sale["status"] == "voided",
+                    provider_cancelled=True,
+                ), 200
+
+        try:
+            latest = midtrans.get_transaction_status(sale["payment_order_id"])
+        except midtrans.MidtransNotFound:
+            if snap_session_cancelled:
+                cancelled_sale = _mark_sale_cancelled(database, sale, user)
+                return jsonify(
+                    sale=_public_sale(cancelled_sale),
+                    cancelled=cancelled_sale["status"] == "voided",
+                    provider_cancelled=True,
+                ), 200
+            return force_cancel_response()
+        except midtrans.MidtransError:
+            return force_cancel_response()
+
+        latest_state = _provider_state(latest)
+        if latest_state != "pending":
+            updated_sale = apply_matching_status(latest)
+            if updated_sale["status"] == "pending":
+                return force_cancel_response()
+            return jsonify(
+                sale=_public_sale(updated_sale),
+                cancelled=updated_sale["status"] == "voided",
+                provider_cancelled=True,
+            ), 200
+
+        # Some payment channels reject Cancel while the transaction is pending.
+        # Expire it as a fallback so the payment instruction cannot stay usable.
+        try:
+            expired = midtrans.expire_transaction(sale["payment_order_id"])
+        except midtrans.MidtransError as provider_error:
+            current_app.logger.warning(
+                "Midtrans could not cancel or expire sale %s (status %s)",
+                sale["receipt_number"], provider_error.status_code or "unknown",
+            )
+            return force_cancel_response()
+
+        if (
+            expired.get("transaction_status", "").lower() == "expire"
+            and expired.get("order_id") == sale["payment_order_id"]
+        ):
+            amount = expired.get("gross_amount")
+            if amount is not None:
+                try:
+                    amount_matches = Decimal(str(amount)) == _decimal(sale["total"])
+                except InvalidOperation:
+                    amount_matches = False
+                if not amount_matches:
+                    raise CheckoutError("payment_amount_mismatch", 400)
+            cancelled_sale = _mark_sale_cancelled(database, sale, user, expired)
+            return jsonify(
+                sale=_public_sale(cancelled_sale),
+                cancelled=cancelled_sale["status"] == "voided",
+                provider_cancelled=True,
+            ), 200
+
+        updated_sale = apply_matching_status(expired)
+        if updated_sale["status"] == "pending":
+            return force_cancel_response()
+        return jsonify(
+            sale=_public_sale(updated_sale),
+            cancelled=updated_sale["status"] == "voided",
+            provider_cancelled=True,
+        ), 200
+    except CheckoutError as error:
+        return jsonify(error=error.code, message=str(error)), error.status
+    except PyMongoError:
+        current_app.logger.exception("Could not cancel pending sale")
         return jsonify(error="database_unavailable"), 503
 
 

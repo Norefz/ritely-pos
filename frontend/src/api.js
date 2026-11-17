@@ -5,6 +5,10 @@ const API_BASE_URL = (
   window.RITELY_API_BASE_URL || defaultApiBaseUrl
 ).replace(/\/$/, "");
 
+export function apiAssetUrl(path) {
+  return /^https?:\/\//i.test(path) ? path : `${API_BASE_URL}${path}`;
+}
+
 const TOKEN_STORAGE_KEY = "ritely_access_token";
 
 function readStoredToken() {
@@ -149,6 +153,10 @@ export async function salesRequest() {
   return apiRequest("/api/sales");
 }
 
+export async function auditLogsRequest() {
+  return apiRequest("/api/audit-logs");
+}
+
 export async function createSaleRequest(data) {
   return apiRequest("/api/sales", {
     method: "POST",
@@ -163,6 +171,12 @@ export async function continuePaymentRequest(saleId) {
   });
 }
 
+export async function cancelSaleRequest(saleId) {
+  return apiRequest(`/api/sales/${encodeURIComponent(saleId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
 export async function refreshPaymentStatusRequest(saleId, verifyProvider = false) {
   const path = `/api/sales/${encodeURIComponent(saleId)}/payment-status`;
   return apiRequest(verifyProvider ? `${path}?verify_provider=1` : path);

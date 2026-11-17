@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from flask import Blueprint, current_app, g, jsonify, request
+from flask import Blueprint, Response, current_app, g, jsonify, request
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from app.database.catalog import (
@@ -14,6 +14,7 @@ from app.database.catalog import (
     get_stock_opnames_collection,
 )
 from app.database.mongo import get_client
+from app.database.shifts import get_shifts_collection
 from app.middleware.auth import authenticate_request, manager_required
 from app.services.catalog_service import (
     CatalogItemNotFoundError,
@@ -131,6 +132,30 @@ def get_products():
         return jsonify(error="database_unavailable"), 503
 
 
+@catalog_bp.get("/products/<product_id>/image")
+def get_product_image(product_id):
+    # Product photos are public catalog assets and must load in ordinary <img> tags.
+    if not ObjectId.is_valid(product_id):
+        return jsonify(error="product_not_found"), 404
+    try:
+        product = get_products_collection().find_one(
+            {"_id": ObjectId(product_id)},
+            {"image_data": 1, "image_content_type": 1},
+        )
+    except PyMongoError:
+        current_app.logger.exception("Could not load product image")
+        return jsonify(error="database_unavailable"), 503
+    if not product or not product.get("image_data"):
+        return jsonify(error="product_image_not_found"), 404
+    response = Response(
+        bytes(product["image_data"]),
+        content_type=product.get("image_content_type", "application/octet-stream"),
+    )
+    response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @catalog_bp.post("/products")
 @manager_required
 def post_product():
@@ -140,6 +165,7 @@ def post_product():
     try:
         products_collection = get_products_collection()
         categories_collection = get_categories_collection()
+        movements_collection = get_stock_movements_collection()
         client = _mongo_client()
         with client.start_session() as session:
             with session.start_transaction():
@@ -149,13 +175,28 @@ def post_product():
                     data,
                     session=session,
                 )
+                if product["stock"]:
+                    movements_collection.insert_one(
+                        {
+                            "product_id": ObjectId(product["id"]),
+                            "type": "opening_balance",
+                            "quantity": product["stock"],
+                            "user_id": g.current_user["_id"],
+                            "created_at": datetime.now(timezone.utc),
+                        },
+                        session=session,
+                    )
                 _audit_log(
                     session,
                     g.current_user,
                     "product_created",
                     "master_product",
                     ObjectId(product["id"]),
-                    {"sku": product["sku"], "name": product["name"]},
+                    {
+                        "sku": product["sku"],
+                        "name": product["name"],
+                        "initial_stock": product["stock"],
+                    },
                 )
     except DuplicateKeyError:
         return jsonify(error="sku_taken"), 409
@@ -374,6 +415,17 @@ def post_stock_opname():
         client = _mongo_client()
         with client.start_session() as session:
             with session.start_transaction():
+                if user["role"] == "cashier":
+                    open_shift = get_shifts_collection().find_one(
+                        {
+                            "cashier_id": user["_id"],
+                            "status": "open",
+                        },
+                        {"_id": 1},
+                        session=session,
+                    )
+                    if not open_shift:
+                        return jsonify(error="shift_not_open"), 409
                 opname = submit_opname(
                     opnames_collection,
                     products_collection,

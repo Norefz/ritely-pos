@@ -1,34 +1,14 @@
 import { state, money, total, uid, escape } from "../../state.js";
 import { receipt } from "./common.js";
-import { ApiError, createSaleRequest, openShiftRequest } from "../../api.js";
+import { ApiError, apiAssetUrl, createSaleRequest, openShiftRequest } from "../../api.js";
 import { loadPaymentConfig, onlinePaymentsEnabled, openSnapPayment } from "../../payments.js";
 import { canCloseShift, canOpenShift, shiftWindow } from "../../shift-time.js";
-
-const productImages = {
-  "Air mineral 600 ml":
-    "https://www.spiresmarket.com/cdn/shop/files/bc2482ea-0b41-49ed-b9e4-7826543c328f_c46380db-a575-422e-85ce-689c25c9327e.jpg?v=1736449123",
-  "Teh melati 350 ml":
-    "https://www.nongfuspring.com.my/cdn/shop/files/imgi_3_3d2cf06d020d4383b369f41a43cb23e5.png?format=webp&v=1775638029&width=600",
-  "Susu UHT cokelat 250 ml":
-    "https://cdnprod.mafretailproxy.com/sys-master-root/hf6/h1d/12463115927582/43287_Main.jpg_480Wx480H",
-  "Roti gandum":
-    "https://kibsecomimgstore.blob.core.windows.net/products/detail/HPL_SDBWHAEPD350LF_20250828171420.jpg",
-  "Biskuit kelapa 300 g":
-    "https://kuwait.grandhyper.com/image/cache/catalog/products/1/101060026235-1000x1000.jpg",
-  "Mi instan goreng":
-    "https://down-id.img.susercontent.com/file/1d4a20c87717dada5aec5749911f50a5",
-  "Tisu wajah 200 lembar":
-    "https://images.cdn.retail.brookshires.com/detail/00011225136566_C1C1.jpeg",
-  "Sabun cuci piring 750 ml":
-    "https://4.bp.blogspot.com/-jsdWrh0qoY4/UMHl4BlLfkI/AAAAAAAACcw/VoJfCV_wXWc/s1600/12158liquid_soap.jpg",
-};
+import { productImageStyle } from "../product-images.js";
 
 /* ---------- Kasir (POS): konfigurasi & helper ---------- */
 // Filter dan nominal tunai bertahan saat refresh() membangun ulang halaman.
 const view = { q: "", category: "all", cash: "", paymentMethod: "cash", submitting: false, confirming: false };
 let scheduleTimer = null;
-const TONES = ["", "orange", "purple", "green"]; // warna avatar per urutan kategori
-
 const svg = (path) =>
   `<svg class="pd-ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 const icons = {
@@ -50,16 +30,6 @@ const scheduleAvailability = () => {
   return `${shift?.id || ""}:${shift ? canCloseShift(shiftType(shift)) : false}:${!state.shift && canOpenShift(state.currentUser?.assigned_shift)}`;
 };
 
-function initials(name) {
-  const w = name.trim().split(/\s+/);
-  return (
-    w.length > 1 ? w[0][0] + w[1][0] : name.trim().slice(0, 2)
-  ).toUpperCase();
-}
-function tone(p) {
-  const i = state.categories.findIndex((c) => c.id === p.category);
-  return TONES[(i < 0 ? 0 : i) % TONES.length];
-}
 function stockTag(p) {
   if (p.stock <= 0) return '<span class="stock-tag empty">Habis</span>';
   return isLow(p)
@@ -69,10 +39,13 @@ function stockTag(p) {
 
 /* ---------- Potongan HTML ---------- */
 function cardHtml(p) {
-  const img = productImages[p.name];
   const label = escape(p.name);
+  const imageStyle = p.imageUrl ? "" : productImageStyle(p.sku);
+  const image = p.imageUrl
+    ? `<img src="${escape(apiAssetUrl(p.imageUrl))}" alt="" loading="lazy" onload="this.parentElement.classList.add('has-image')" onerror="this.remove()">`
+    : "";
   return `<button type="button" class="ps-card${p.stock <= 0 ? " out" : ""}" data-act="add" data-id="${escape(String(p.id))}" data-cat="${escape(String(p.category))}" data-search="${escape((p.name + " " + p.sku).toLowerCase())}" aria-label="Tambah ${label} ke keranjang">
-    <span class="ps-art ${tone(p)}"><b>${escape(initials(p.name))}</b>${img ? `<img src="${escape(img)}" alt="" loading="lazy" onload="this.classList.add('on')" onerror="this.remove()">` : ""}</span>
+    <span class="ps-photo${imageStyle ? " ps-generated-photo" : ""}"${imageStyle ? ` style="${imageStyle}"` : ""} aria-hidden="true">${image}</span>
     <strong>${label}</strong>
     <span class="ps-price">${money(p.price)}</span>
     ${stockTag(p)}
@@ -141,8 +114,8 @@ function shell() {
   return `
     <div class="ps-wrap">
       <div class="ps-top">
-        <label class="pd-search">${icons.search}<input type="search" placeholder="Cari produk atau scan barcode" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
-        <span class="ps-shift${open ? " on" : ""}"><span></span>${open ? `${escape(shiftType(openShift).replace("_", " "))} · terbuka sejak ${since} WIB` : otherShift ? `Shift ${escape(state.shift.cashier)} masih terbuka` : openAllowed ? "Shift belum dibuka" : `Jadwal ${assignedWindow?.label || "—"} WIB`}</span>
+        <label class="pd-search">${icons.search}<input type="search" placeholder="Cari produk" value="${escape(view.q)}" aria-label="Cari produk" autocomplete="off" /></label>
+        <span class="ps-shift${open && !shiftEnded ? " on" : ""}"><span></span>${open ? `${escape(shiftType(openShift).replace("_", " "))} · ${shiftEnded ? "waktu shift berakhir" : `terbuka sejak ${since} WIB`}` : otherShift ? `Shift ${escape(state.shift.cashier)} masih terbuka` : openAllowed ? "Shift belum dibuka" : `Jadwal ${assignedWindow?.label || "—"} WIB`}</span>
         ${shiftEnded ? `<button type="button" class="sh-btn primary" data-act="manage-shift">Tutup shift</button>` : open || otherShift || !openAllowed ? "" : `<button type="button" class="sh-btn primary" data-act="open">${icons.play}Buka shift</button>`}
       </div>
       <div class="ps-main">
@@ -322,7 +295,7 @@ export function pos(refresh) {
   }
   async function openShift() {
     if (!canOpenShift(state.currentUser?.assigned_shift)) {
-      webix.message({ type: "error", text: "Shift hanya dapat dibuka selama jam penugasan Anda." });
+      webix.message({ type: "error", text: "Akun ini belum memiliki jadwal shift yang valid." });
       return;
     }
     try {
@@ -393,7 +366,11 @@ export function pos(refresh) {
         view.paymentMethod = "cash";
         refresh();
         if (method === "online") {
-          if (result.snap_token) await openSnapPayment(sale, result.snap_token, refresh);
+          if (result.snap_token) {
+            view.submitting = false;
+            if (!root.$destructed) paint(root);
+            void openSnapPayment(sale, result.snap_token, refresh);
+          }
           else webix.message({ type: "error", text: "Sesi pembayaran belum tersedia. Periksa status transaksi di Riwayat transaksi." });
         } else {
           for (const item of sale.items) {

@@ -1,70 +1,138 @@
 import { state, money, date, completed, escape } from "../../state.js";
-import { heading, table, button } from "./common.js";
-const hourly = [
-  ["08.00", 4],
-  ["09.00", 7],
-  ["10.00", 9],
-  ["11.00", 11],
-  ["12.00", 18],
-  ["13.00", 15],
-  ["14.00", 10],
-  ["15.00", 8],
-  ["16.00", 12],
-  ["17.00", 16],
-];
-const demoSales = [
-  {
-    id: "RTL-000086",
-    cashier: "Dewi",
-    payment_method: "cash",
-    total: 41000,
-    status: "completed",
-    payment_status: "paid",
-  },
-  {
-    id: "RTL-000085",
-    cashier: "Dewi",
-    payment_method: "online",
-    total: 128500,
-    status: "completed",
-    payment_status: "paid",
-  },
-  {
-    id: "RTL-000084",
-    cashier: "Dewi",
-    payment_method: "cash",
-    total: 23000,
-    status: "completed",
-    payment_status: "paid",
-  },
-  {
-    id: "RTL-000083",
-    cashier: "Dewi",
-    payment_method: "cash",
-    total: 67500,
-    status: "completed",
-    payment_status: "paid",
-  },
-  {
-    id: "RTL-000082",
-    cashier: "Dewi",
-    payment_method: "online",
-    total: 15000,
-    status: "completed",
-    payment_status: "paid",
-  },
-  ...Array.from({ length: 15 }, (_, index) => {
-    const number = 81 - index;
+import { table, button } from "./common.js";
+const TIME_ZONE = "Asia/Jakarta";
+const dateParts = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const dateTimeParts = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  hourCycle: "h23",
+});
+const rangeDate = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: TIME_ZONE,
+});
+const shortDate = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "short",
+  timeZone: TIME_ZONE,
+});
+const weekday = new Intl.DateTimeFormat("id-ID", {
+  weekday: "short",
+  timeZone: TIME_ZONE,
+});
+function partsMap(formatter, value) {
+  return Object.fromEntries(
+    formatter.formatToParts(value).map(({ type, value: part }) => [type, part]),
+  );
+}
+function dayKey(value) {
+  const parts = partsMap(dateParts, value);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+function dateForKey(key) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12));
+}
+function shiftDay(key, amount) {
+  const day = dateForKey(key);
+  day.setUTCDate(day.getUTCDate() + amount);
+  return day.toISOString().slice(0, 10);
+}
+function periodBounds(period, now = new Date()) {
+  const today = dayKey(now);
+  const [year, month, day] = today.split("-").map(Number);
+  if (period === "week") {
+    const weekdayIndex = dateForKey(today).getUTCDay();
+    const sinceMonday = (weekdayIndex + 6) % 7;
+    const start = shiftDay(today, -sinceMonday);
+    return { start, end: shiftDay(start, 6), through: today };
+  }
+  if (period === "month") {
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
     return {
-      id: `RTL-${String(number).padStart(6, "0")}`,
-      cashier: index % 2 ? "Dewi" : "Rani",
-      payment_method: index % 3 ? "cash" : "online",
-      total: [32000, 78500, 12500, 96000, 45000][index % 5],
-      status: "completed",
-      payment_status: "paid",
+      start: `${year}-${String(month).padStart(2, "0")}-01`,
+      end: `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+      through: today,
     };
-  }),
-];
+  }
+  return { start: today, end: today, through: today };
+}
+function salesForPeriod(period) {
+  const { start, through } = periodBounds(period);
+  return completed().filter((sale) => {
+    const timestamp = sale.paid_at || sale.created_at;
+    return timestamp && dayKey(new Date(timestamp)) >= start && dayKey(new Date(timestamp)) <= through;
+  });
+}
+function periodSubtitle(period) {
+  const { start, end, through } = periodBounds(period);
+  if (period === "today") return rangeDate.format(dateForKey(through));
+  if (period === "week") {
+    return `${shortDate.format(dateForKey(start))}–${rangeDate.format(dateForKey(end))}`;
+  }
+  return `1–${rangeDate.format(dateForKey(through))}`;
+}
+function chartPoints(period, sales) {
+  const counts = new Map();
+  sales.forEach((sale) => {
+    const timestamp = sale.paid_at || sale.created_at;
+    if (!timestamp) return;
+    const parts = partsMap(dateTimeParts, new Date(timestamp));
+    const key = `${parts.year}-${parts.month}-${parts.day}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  if (period === "today") {
+    const hours = sales
+      .map((sale) => {
+        const timestamp = sale.paid_at || sale.created_at;
+        return timestamp ? Number(partsMap(dateTimeParts, new Date(timestamp)).hour) : null;
+      })
+      .filter((hour) => hour !== null);
+    const firstHour = Math.min(8, ...(hours.length ? hours : [8]));
+    const lastHour = Math.max(17, ...(hours.length ? hours : [17]));
+    const today = periodBounds(period).start;
+    return Array.from({ length: lastHour - firstHour + 1 }, (_, index) => {
+      const hour = firstHour + index;
+      const value = sales.filter((sale) => {
+        const timestamp = sale.paid_at || sale.created_at;
+        if (!timestamp) return false;
+        const parts = partsMap(dateTimeParts, new Date(timestamp));
+        return `${parts.year}-${parts.month}-${parts.day}` === today && Number(parts.hour) === hour;
+      }).length;
+      return [`${String(hour).padStart(2, "0")}.00`, value];
+    });
+  }
+  if (period === "week") {
+    const { start } = periodBounds(period);
+    return Array.from({ length: 7 }, (_, index) => {
+      const key = shiftDay(start, index);
+      return [weekday.format(dateForKey(key)), counts.get(key) || 0];
+    });
+  }
+  const { start, through } = periodBounds(period);
+  const daysInMonth = Number(through.slice(-2));
+  const groups = Math.ceil(daysInMonth / 7);
+  return Array.from({ length: groups }, (_, index) => {
+    const firstDay = index * 7 + 1;
+    const lastDay = Math.min(firstDay + 6, daysInMonth);
+    let value = 0;
+    for (let day = firstDay; day <= lastDay; day += 1) {
+      const key = `${start.slice(0, 8)}${String(day).padStart(2, "0")}`;
+      value += counts.get(key) || 0;
+    }
+    return [`${firstDay}–${lastDay}`, value];
+  });
+}
 const e = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -73,9 +141,11 @@ const e = (s) =>
         c
       ],
   );
-function hourlyChart() {
-  const peak = Math.max(...hourly.map(([, value]) => value));
-  return `<div class="chart-bars">${hourly.map(([hour, value], i) => `<div class="chart-col"><b>${value}</b><span class="chart-bar ${i === 4 ? "peak" : ""}" style="height:${Math.round((value / peak) * 192)}px"></span><small>${hour}</small></div>`).join("")}</div>`;
+function salesChart(period) {
+  const points = chartPoints(period, salesForPeriod(period));
+  const peak = Math.max(1, ...points.map(([, value]) => value));
+  const periodClass = period === "month" ? " is-month" : "";
+  return `<div class="chart-bars${periodClass}">${points.map(([label, value]) => `<div class="chart-col"><b>${value}</b><span class="chart-bar${value === peak && value > 0 ? " peak" : ""}" style="height:${Math.max(18, Math.round((value / peak) * 192))}px"></span><small>${label}</small></div>`).join("")}</div>`;
 }
 function shiftsPanel() {
   if (state.shift)
@@ -83,23 +153,42 @@ function shiftsPanel() {
   return '<div class="next-shift"><strong>Belum ada shift yang dibuka</strong><span class="state-tag">Register siap</span><p>Shift 1 · 07.00–15.00 WIB</p></div><div class="next-shift"><strong>Shift 2 · 15.00–22.00</strong><span class="state-tag">Belum mulai</span><p>Menunggu kasir membuka shift.</p></div>';
 }
 export function dashboard(navigate) {
+  let period = "today";
   const low = state.products
     .filter((p) => p.active && p.stock <= p.minimum)
     .slice(0, 4);
-  const sales = completed();
-  const shown = sales.length ? sales : demoSales;
-  const revenue = sales.length
-    ? sales.reduce((n, s) => n + s.total, 0)
-    : 12400000;
-  const count = sales.length || 86;
-  const avg = Math.round(revenue / count);
-  const currentDate = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Asia/Jakarta",
-  }).format(new Date());
+  const selectedSales = () => salesForPeriod(period);
+  const recentSales = () =>
+    [...selectedSales()]
+      .sort(
+        (a, b) =>
+          new Date(b.paid_at || b.created_at) -
+          new Date(a.paid_at || a.created_at),
+      )
+      .slice(0, 10);
+  const periodTitle = () =>
+    period === "week" ? "minggu ini" : period === "month" ? "bulan ini" : "hari ini";
+  const dashboardHeading = () =>
+    `<h1>Dasbor ${periodTitle()}</h1><p>${periodSubtitle(period)} · transaksi lunas</p>`;
+  const dashboardKpis = () => {
+    const sales = selectedSales();
+    const revenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+    const count = sales.length;
+    const avg = count ? Math.round(revenue / count) : 0;
+    return `<div class="kpi-sales"><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong></div><div class="kpi-count"><span>Transaksi</span><strong>${count}</strong></div><div class="kpi-average"><span>Rata-rata / transaksi</span><strong class="kpi-money">${money(avg)}</strong></div><div class="kpi-shifts"><span>Shift terbuka</span><strong>${state.shift ? "1 dari 1" : "0 dari 1"}</strong></div>`;
+  };
+  const updatePeriod = (value) => {
+    period = value;
+    ["dashboardPeriodHeading", "dashboardKpis", "dashboardChartHeading", "dashboardSalesChart"].forEach((id) => {
+      const view = $$(id);
+      if (view) view.refresh();
+    });
+    const salesTable = $$("dashboardRecentSales");
+    if (salesTable) {
+      salesTable.clearAll();
+      salesTable.parse(recentSales());
+    }
+  };
   return {
     view: "scrollview",
     scroll: "y",
@@ -110,14 +199,28 @@ export function dashboard(navigate) {
         {
           height: 84,
           cols: [
-            heading("Dasbor hari ini", currentDate + " · data contoh"),
+            {
+              view: "template",
+              id: "dashboardPeriodHeading",
+              borderless: true,
+              height: 88,
+              css: "page-heading",
+              template: dashboardHeading,
+            },
             {},
             {
-              ...button("Hari ini", () => {}),
-              autowidth: false,
-              width: 92,
-              height: 56,
-              css: "dashboard-action today-action",
+              view: "select",
+              id: "dashboardPeriod",
+              value: "today",
+              options: [
+                { id: "today", value: "Hari ini" },
+                { id: "week", value: "Minggu ini" },
+                { id: "month", value: "Bulan ini" },
+              ],
+              width: 136,
+              height: 44,
+              css: "dashboard-period",
+              on: { onChange: updatePeriod },
             },
             { width: 16 },
             {
@@ -131,9 +234,10 @@ export function dashboard(navigate) {
         },
         {
           view: "template",
+          id: "dashboardKpis",
           height: 120,
           css: "manager-kpis",
-          template: `<div class="kpi-sales"><span>Total penjualan</span><strong class="kpi-money">${money(revenue)}</strong></div><div class="kpi-count"><span>Transaksi</span><strong>${count}</strong></div><div class="kpi-average"><span>Rata-rata / transaksi</span><strong class="kpi-money">${money(avg)}</strong></div><div class="kpi-shifts"><span>Shift terbuka</span><strong>${state.shift ? "1 dari 1" : "0 dari 1"}</strong></div>`,
+          template: dashboardKpis,
         },
         {
           height: 380,
@@ -145,12 +249,24 @@ export function dashboard(navigate) {
               rows: [
                 {
                   view: "template",
+                  id: "dashboardChartHeading",
                   height: 54,
                   css: "panel-heading",
-                  template:
-                    "<h2>Transaksi per jam</h2><span>Jumlah transaksi · berdasarkan waktu bayar</span>",
+                  template: () => {
+                    const chartTitle = period === "today"
+                      ? "Transaksi per jam"
+                      : period === "week"
+                        ? "Transaksi per hari"
+                        : "Transaksi per minggu";
+                    return `<h2>${chartTitle}</h2><span>Transaksi lunas · ${periodTitle()}</span>`;
+                  },
                 },
-                { view: "template", css: "sales-chart", template: hourlyChart },
+                {
+                  view: "template",
+                  id: "dashboardSalesChart",
+                  css: "sales-chart",
+                  template: () => salesChart(period),
+                },
               ],
             },
             {
@@ -228,8 +344,13 @@ export function dashboard(navigate) {
                       css: "numeric",
                     },
                   ],
-                  [...shown].reverse(),
-                  { height: 300, scrollX: false, scrollY: true },
+                  recentSales(),
+                  {
+                    id: "dashboardRecentSales",
+                    height: 300,
+                    scrollX: false,
+                    scrollY: true,
+                  },
                 ),
               ],
             },
